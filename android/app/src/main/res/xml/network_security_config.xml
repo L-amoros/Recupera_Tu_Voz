@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- ElevenLabs y todas las APIs usan HTTPS, no necesitan cleartext -->
+    <!-- just_audio usa un servidor local HTTP en 127.0.0.1 para reproducir audio -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

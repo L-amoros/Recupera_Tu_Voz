@@ -1,0 +1,92 @@
+import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/shared_widgets.dart';
+
+class RegisterScreen extends StatefulWidget {
+  final Future<void> Function(String name, String email, String password) onRegister;
+  final VoidCallback onGoLogin;
+  const RegisterScreen({super.key, required this.onRegister, required this.onGoLogin});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _nameCtrl  = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passCtrl  = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _submit() async {
+    if (_nameCtrl.text.trim().isEmpty || _emailCtrl.text.trim().isEmpty || _passCtrl.text.isEmpty) {
+      setState(() => _error = 'Rellena todos los campos');
+      return;
+    }
+    if (_passCtrl.text.length < 6) {
+      setState(() => _error = 'La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      await widget.onRegister(_nameCtrl.text.trim(), _emailCtrl.text.trim(), _passCtrl.text);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void dispose() { _nameCtrl.dispose(); _emailCtrl.dispose(); _passCtrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(child: Icon(Icons.person_add_outlined,
+                    size: 64, color: AppColors.accent)),
+                const SizedBox(height: 16),
+                const Center(child: Text('Crear cuenta',
+                    style: TextStyle(color: AppColors.textPrimary,
+                        fontSize: 26, fontWeight: FontWeight.w700))),
+                const SizedBox(height: 6),
+                const Center(child: Text('Es gratis y solo toma un momento',
+                    style: TextStyle(color: AppColors.textDim, fontSize: 14))),
+                const SizedBox(height: 40),
+                AuthField(ctrl: _nameCtrl, label: 'Nombre', hint: 'Tu nombre'),
+                const SizedBox(height: 14),
+                AuthField(ctrl: _emailCtrl, label: 'Email',
+                    hint: 'tu@email.com', type: TextInputType.emailAddress),
+                const SizedBox(height: 14),
+                AuthField(ctrl: _passCtrl, label: 'Contraseña',
+                    hint: 'Mínimo 6 caracteres', obscure: true, onSubmit: _submit),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_error!, style: const TextStyle(color: AppColors.warn, fontSize: 13)),
+                ],
+                const SizedBox(height: 24),
+                AuthButton(label: 'Crear cuenta', loading: _loading, onTap: _submit),
+                const SizedBox(height: 18),
+                Center(
+                  child: GestureDetector(
+                    onTap: widget.onGoLogin,
+                    child: const Text('¿Ya tienes cuenta? Inicia sesión',
+                        style: TextStyle(color: AppColors.accent, fontSize: 14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
