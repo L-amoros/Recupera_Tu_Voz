@@ -42,6 +42,7 @@ class AppRoot extends StatefulWidget {
 class _AppRootState extends State<AppRoot> {
   final AuthService _auth = AuthService();
   final SettingsService _settingsSvc = SettingsService();
+  final VoiceApiService _voiceApi = VoiceApiService();
 
   AppUser? _user;
   AppSettings _settings = const AppSettings();
@@ -57,9 +58,25 @@ class _AppRootState extends State<AppRoot> {
   Future<void> _boot() async {
     final user = await _auth.loadUser();
     final settings = await _settingsSvc.loadSettings();
+
+    // Si hay sesión activa, sincronizamos num_references con el servidor
+    AppUser? syncedUser = user;
+    if (user != null) {
+      try {
+        final status = await _voiceApi.checkVoiceStatusFull(user.token);
+        syncedUser = user.copyWith(
+          hasVoice: status['has_voice'] as bool? ?? user.hasVoice,
+          numReferences: status['num_references'] as int? ?? user.numReferences,
+        );
+        await _auth.saveUser(syncedUser);
+      } catch (_) {
+        // Si falla la red, usamos los datos locales guardados
+      }
+    }
+
     if (mounted) {
       setState(() {
-        _user = user;
+        _user = syncedUser;
         _settings = settings;
         _loading = false;
       });
@@ -73,7 +90,8 @@ class _AppRootState extends State<AppRoot> {
   }
 
   Future<void> _register(String name, String email, String password) async {
-    final user = await _auth.register(name: name, email: email, password: password);
+    final user =
+    await _auth.register(name: name, email: email, password: password);
     await _auth.saveUser(user);
     if (mounted) setState(() { _user = user; _showRegister = false; });
   }
@@ -83,13 +101,11 @@ class _AppRootState extends State<AppRoot> {
     if (mounted) setState(() => _user = null);
   }
 
-  void _onSettingsChanged(AppSettings s) {
-    setState(() => _settings = s);
-  }
+  void _onSettingsChanged(AppSettings s) => setState(() => _settings = s);
 
   void _onUserChanged(AppUser u) {
     setState(() => _user = u);
-    _auth.saveUser(u);
+    _auth.saveUser(u); // persiste numReferences junto con todo lo demás
   }
 
   @override
@@ -101,7 +117,6 @@ class _AppRootState extends State<AppRoot> {
       );
     }
 
-    // ── No autenticado ─────────────────────────────────────────────
     if (_user == null) {
       if (_showRegister) {
         return RegisterScreen(
@@ -115,7 +130,6 @@ class _AppRootState extends State<AppRoot> {
       );
     }
 
-    // ── Autenticado ────────────────────────────────────────────────
     return AppShell(
       user: _user!,
       settings: _settings,
@@ -155,37 +169,30 @@ class _AppShellState extends State<AppShell> {
 
   void _goToTab(int i) => setState(() => _tabIndex = i);
 
-  Future<void> _uploadVoice(List<int> bytes, String filename) async {
-    await _voiceApi.uploadReferenceAudio(
-      token: widget.user.token,
-      bytes: bytes as dynamic,
-      filename: filename,
-    );
-    widget.onUserChanged(widget.user.copyWith(hasVoice: true));
-  }
-
-  Future<void> _deleteVoice() async {
-    await _voiceApi.deleteVoice(widget.user.token);
-    widget.onUserChanged(widget.user.copyWith(hasVoice: false));
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_showCloneVoice) {
       return CloneVoiceScreen(
         token: widget.user.token,
         alreadyHasVoice: widget.user.hasVoice,
-        onUpload: (bytes, filename) async {
-          await _voiceApi.uploadReferenceAudio(
+        // Siempre viene del modelo persistido → nunca se pierde
+        initialNumReferences: widget.user.numReferences,
+        onUploadMultiple: (files) async {
+          final saved = await _voiceApi.uploadMultipleAudios(
             token: widget.user.token,
-            bytes: bytes,
-            filename: filename,
+            files: files,
           );
-          widget.onUserChanged(widget.user.copyWith(hasVoice: true));
+          // Guardamos el nuevo contador en el modelo
+          widget.onUserChanged(
+            widget.user.copyWith(hasVoice: true, numReferences: saved),
+          );
+          return saved;
         },
         onDelete: () async {
           await _voiceApi.deleteVoice(widget.user.token);
-          widget.onUserChanged(widget.user.copyWith(hasVoice: false));
+          widget.onUserChanged(
+            widget.user.copyWith(hasVoice: false, numReferences: 0),
+          );
         },
         onDone: () => setState(() => _showCloneVoice = false),
       );

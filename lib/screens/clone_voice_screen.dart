@@ -6,7 +6,11 @@ import '../theme/app_theme.dart';
 class CloneVoiceScreen extends StatefulWidget {
   final String token;
   final bool alreadyHasVoice;
-  final Future<void> Function(Uint8List bytes, String filename) onUpload;
+  final int initialNumReferences;
+
+  /// Sube VARIOS audios a la vez. Devuelve cuántos quedaron guardados.
+  final Future<int> Function(List<({Uint8List bytes, String filename})> files)
+  onUploadMultiple;
   final Future<void> Function() onDelete;
   final VoidCallback onDone;
 
@@ -14,7 +18,8 @@ class CloneVoiceScreen extends StatefulWidget {
     super.key,
     required this.token,
     required this.alreadyHasVoice,
-    required this.onUpload,
+    this.initialNumReferences = 0,
+    required this.onUploadMultiple,
     required this.onDelete,
     required this.onDone,
   });
@@ -25,30 +30,51 @@ class CloneVoiceScreen extends StatefulWidget {
 
 class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
   late bool _hasVoice;
+  late int _numRefs;
   bool _uploading = false;
   String? _error;
   String? _success;
+
+  static const int _maxRefs = 3;
 
   @override
   void initState() {
     super.initState();
     _hasVoice = widget.alreadyHasVoice;
+    _numRefs = widget.initialNumReferences;
   }
 
-  Future<void> _pickAndUpload() async {
+  Future<void> _pickAndUpload({bool replace = false}) async {
+    final remaining = replace ? _maxRefs : _maxRefs - _numRefs;
+    if (remaining <= 0) return;
+
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['wav', 'mp3', 'm4a', 'ogg'],
       withData: true,
+      allowMultiple: remaining > 1,
     );
-    if (result == null || result.files.single.bytes == null) return;
+    if (result == null || result.files.isEmpty) return;
 
-    final file = result.files.single;
+    final picked = result.files.take(remaining).toList();
+    final filesData = picked
+        .where((f) => f.bytes != null)
+        .map((f) => (bytes: f.bytes!, filename: f.name))
+        .toList();
+
+    if (filesData.isEmpty) return;
+
     setState(() { _uploading = true; _error = null; _success = null; });
 
     try {
-      await widget.onUpload(file.bytes!, file.name);
-      setState(() { _hasVoice = true; _success = '✅ ¡Voz clonada correctamente!'; });
+      final total = await widget.onUploadMultiple(filesData);
+      setState(() {
+        _hasVoice = true;
+        _numRefs = total; // siempre el total real que devuelve el servidor
+        _success =
+        '✅ $_numRefs/$_maxRefs audio${_numRefs == 1 ? '' : 's'} guardado${_numRefs == 1 ? '' : 's'}.'
+            '${_numRefs < _maxRefs ? ' Puedes añadir más para mejorar la clonación.' : ' ¡Máximo alcanzado!'}';
+      });
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -80,7 +106,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
     if (ok != true) return;
     try {
       await widget.onDelete();
-      setState(() { _hasVoice = false; _success = 'Voz eliminada'; });
+      setState(() { _hasVoice = false; _numRefs = 0; _success = 'Voz eliminada'; });
     } catch (e) {
       setState(() => _error = e.toString());
     }
@@ -102,7 +128,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Estado
+            // ── Estado ──────────────────────────────────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -118,24 +144,59 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               child: Row(
                 children: [
                   Icon(
-                    _hasVoice
-                        ? Icons.check_circle_outline
-                        : Icons.mic_none_rounded,
+                    _hasVoice ? Icons.check_circle_outline : Icons.mic_none_rounded,
                     color: _hasVoice ? AppColors.teal : AppColors.accent,
                     size: 28,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      _hasVoice
-                          ? 'Tienes una voz clonada activa.\nSolo tú puedes usarla.'
-                          : 'No tienes voz clonada aún.\nSube un audio para empezar.',
-                      style: TextStyle(
-                        color: _hasVoice ? AppColors.teal : AppColors.accent,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        height: 1.5,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _hasVoice
+                              ? 'Tienes una voz clonada activa.'
+                              : 'No tienes voz clonada aún.',
+                          style: TextStyle(
+                            color: _hasVoice ? AppColors.teal : AppColors.accent,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (_hasVoice) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: List.generate(_maxRefs, (i) {
+                              final filled = i < _numRefs;
+                              return Expanded(
+                                child: Container(
+                                  margin: EdgeInsets.only(right: i < _maxRefs - 1 ? 4 : 0),
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(3),
+                                    color: filled
+                                        ? AppColors.teal
+                                        : AppColors.teal.withOpacity(0.2),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$_numRefs/$_maxRefs muestras  •  '
+                                '${_numRefs < _maxRefs ? 'Añade más para mejor calidad' : '¡Calidad máxima!'}',
+                            style: TextStyle(
+                              color: AppColors.teal.withOpacity(0.8),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ] else
+                          const Text(
+                            'Sube hasta 3 audios para empezar.',
+                            style: TextStyle(color: AppColors.textDim, fontSize: 12),
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -150,12 +211,11 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
             const Text(
-              '• Graba o busca un audio tuyo hablando con claridad\n'
-              '• Duración ideal: 30 segundos — 2 minutos\n'
-              '• Sin música ni ruido de fondo\n'
-              '• Formatos: WAV, MP3, M4A, OGG (máx. 20MB)',
-              style: TextStyle(
-                  color: AppColors.textMid, fontSize: 13, height: 1.8),
+              '• Sube hasta 3 audios tuyos hablando con claridad\n'
+                  '• Duración ideal por audio: 30 seg — 2 min\n'
+                  '• Sin música ni ruido de fondo\n'
+                  '• Formatos: WAV, MP3, M4A, OGG (máx. 20MB c/u)',
+              style: TextStyle(color: AppColors.textMid, fontSize: 13, height: 1.8),
             ),
             const SizedBox(height: 28),
 
@@ -163,25 +223,39 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Text(_error!,
-                    style: const TextStyle(
-                        color: AppColors.warn, fontSize: 13)),
+                    style: const TextStyle(color: AppColors.warn, fontSize: 13)),
               ),
             if (_success != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Text(_success!,
-                    style: const TextStyle(
-                        color: AppColors.teal, fontSize: 13)),
+                    style: const TextStyle(color: AppColors.teal, fontSize: 13)),
               ),
 
-            // Botón subir
+            // ── Botón principal ──────────────────────────────────
             _BigButton(
-              label: _hasVoice ? 'Reemplazar voz' : 'Seleccionar audio y clonar',
+              label: _hasVoice
+                  ? 'Reemplazar todo (subir nuevos)'
+                  : 'Seleccionar audios y clonar',
               icon: Icons.upload_file_rounded,
               color: AppColors.accent,
               loading: _uploading,
-              onTap: _pickAndUpload,
+              onTap: () => _pickAndUpload(replace: true),
             ),
+
+            // ── Añadir más (solo si hay hueco) ───────────────────
+            if (_hasVoice && _numRefs < _maxRefs) ...[
+              const SizedBox(height: 12),
+              _BigButton(
+                label: 'Añadir más audios '
+                    '(${_maxRefs - _numRefs} libre${_maxRefs - _numRefs == 1 ? '' : 's'})',
+                icon: Icons.add_circle_outline_rounded,
+                color: AppColors.teal,
+                loading: _uploading,
+                onTap: () => _pickAndUpload(replace: false),
+                outline: true,
+              ),
+            ],
 
             if (_hasVoice) ...[
               const SizedBox(height: 12),
@@ -243,21 +317,21 @@ class _BigButton extends StatelessWidget {
         child: Center(
           child: loading
               ? const SizedBox(
-                  width: 22, height: 22,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
+              width: 22, height: 22,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white))
               : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, color: outline ? color : Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Text(label,
-                        style: TextStyle(
-                            color: outline ? color : Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700)),
-                  ],
-                ),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: outline ? color : Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(label,
+                  style: TextStyle(
+                      color: outline ? color : Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700)),
+            ],
+          ),
         ),
       ),
     );

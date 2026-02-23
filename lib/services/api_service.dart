@@ -30,14 +30,14 @@ class AuthService {
   }) async {
     final res = await http
         .post(
-          Uri.parse('$kServerUrl/auth/register'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'email': email.trim(),
-            'password': password,
-            'name': name.trim(),
-          }),
-        )
+      Uri.parse('$kServerUrl/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email.trim(),
+        'password': password,
+        'name': name.trim(),
+      }),
+    )
         .timeout(const Duration(seconds: 15));
     return _parseAuth(res);
   }
@@ -49,11 +49,11 @@ class AuthService {
     // El backend usa OAuth2PasswordRequestForm → form-data
     final res = await http
         .post(
-          Uri.parse('$kServerUrl/auth/login'),
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: 'username=${Uri.encodeComponent(email.trim())}'
-              '&password=${Uri.encodeComponent(password)}',
-        )
+      Uri.parse('$kServerUrl/auth/login'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: 'username=${Uri.encodeComponent(email.trim())}'
+          '&password=${Uri.encodeComponent(password)}',
+    )
         .timeout(const Duration(seconds: 15));
     return _parseAuth(res);
   }
@@ -92,37 +92,68 @@ class AuthService {
 // ─────────────────────────────────────────────────────────────────
 class VoiceApiService {
   Map<String, String> _headers(String token) => {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
+    'Authorization': 'Bearer $token',
+    'Content-Type': 'application/json',
+  };
 
-  Future<bool> checkVoiceStatus(String token) async {
+  /// Devuelve {has_voice, num_references, cloned_at}
+  Future<Map<String, dynamic>> checkVoiceStatusFull(String token) async {
     try {
       final res = await http
           .get(Uri.parse('$kServerUrl/voice/status'),
-              headers: _headers(token))
+          headers: _headers(token))
           .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
-        final d = jsonDecode(res.body) as Map<String, dynamic>;
-        return d['has_voice'] as bool? ?? false;
+        return jsonDecode(res.body) as Map<String, dynamic>;
       }
     } catch (_) {}
-    return false;
+    return {'has_voice': false, 'num_references': 0};
   }
 
+  Future<bool> checkVoiceStatus(String token) async {
+    final d = await checkVoiceStatusFull(token);
+    return d['has_voice'] as bool? ?? false;
+  }
+
+  /// Sube hasta 3 audios de golpe usando /voice/upload-multiple.
+  /// Devuelve el número de referencias guardadas.
+  Future<int> uploadMultipleAudios({
+    required String token,
+    required List<({Uint8List bytes, String filename})> files,
+  }) async {
+    final request = http.MultipartRequest(
+        'POST', Uri.parse('$kServerUrl/voice/upload-multiple'))
+      ..headers['Authorization'] = 'Bearer $token';
+
+    for (final f in files) {
+      request.files.add(
+          http.MultipartFile.fromBytes('files', f.bytes, filename: f.filename));
+    }
+
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
+    final res = await http.Response.fromStream(streamed);
+
+    if (res.statusCode != 200) {
+      throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+    }
+    final d = jsonDecode(res.body) as Map<String, dynamic>;
+    return d['num_references'] as int? ?? files.length;
+  }
+
+  /// Sube UN solo audio (sigue disponible por compatibilidad).
   Future<void> uploadReferenceAudio({
     required String token,
     required Uint8List bytes,
     required String filename,
   }) async {
     final request =
-        http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload'))
-          ..headers['Authorization'] = 'Bearer $token'
-          ..files.add(
-              http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(
+          http.MultipartFile.fromBytes('file', bytes, filename: filename));
 
     final streamed =
-        await request.send().timeout(const Duration(seconds: 60));
+    await request.send().timeout(const Duration(seconds: 60));
     final res = await http.Response.fromStream(streamed);
 
     if (res.statusCode != 200) {
@@ -138,10 +169,10 @@ class VoiceApiService {
   }) async {
     final res = await http
         .post(
-          Uri.parse('$kServerUrl/voice/tts'),
-          headers: _headers(token),
-          body: jsonEncode({'text': text, 'speed': speed}),
-        )
+      Uri.parse('$kServerUrl/voice/tts'),
+      headers: _headers(token),
+      body: jsonEncode({'text': text, 'speed': speed}),
+    )
         .timeout(const Duration(seconds: 30));
 
     if (res.statusCode == 200) return res.bodyBytes;
@@ -151,7 +182,7 @@ class VoiceApiService {
   Future<void> deleteVoice(String token) async {
     final res = await http
         .delete(Uri.parse('$kServerUrl/voice/'),
-            headers: _headers(token))
+        headers: _headers(token))
         .timeout(const Duration(seconds: 10));
     if (res.statusCode != 200) {
       throw ApiException(_extractDetail(res), statusCode: res.statusCode);
