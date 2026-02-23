@@ -177,12 +177,22 @@ class _AppShellState extends State<AppShell> {
         alreadyHasVoice: widget.user.hasVoice,
         // Siempre viene del modelo persistido → nunca se pierde
         initialNumReferences: widget.user.numReferences,
-        onUploadMultiple: (files) async {
-          final saved = await _voiceApi.uploadMultipleAudios(
+        onUploadReplace: (files) async {
+          final saved = await _voiceApi.uploadReplaceAudios(
             token: widget.user.token,
             files: files,
           );
           // Guardamos el nuevo contador en el modelo
+          widget.onUserChanged(
+            widget.user.copyWith(hasVoice: true, numReferences: saved),
+          );
+          return saved;
+        },
+        onUploadAdd: (files) async {
+          final saved = await _voiceApi.uploadAddAudios(
+            token: widget.user.token,
+            files: files,
+          );
           widget.onUserChanged(
             widget.user.copyWith(hasVoice: true, numReferences: saved),
           );

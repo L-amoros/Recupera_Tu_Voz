@@ -8,9 +8,16 @@ class CloneVoiceScreen extends StatefulWidget {
   final bool alreadyHasVoice;
   final int initialNumReferences;
 
-  /// Sube VARIOS audios a la vez. Devuelve cuántos quedaron guardados.
+  /// Sube archivos en modo ACUMULATIVO (usa /upload uno a uno).
+  /// Devuelve cuántos quedaron guardados en total.
   final Future<int> Function(List<({Uint8List bytes, String filename})> files)
-  onUploadMultiple;
+  onUploadAdd;
+
+  /// Sube archivos REEMPLAZANDO todo (usa /upload-multiple con borrado previo).
+  /// Devuelve cuántos quedaron guardados en total.
+  final Future<int> Function(List<({Uint8List bytes, String filename})> files)
+  onUploadReplace;
+
   final Future<void> Function() onDelete;
   final VoidCallback onDone;
 
@@ -19,7 +26,8 @@ class CloneVoiceScreen extends StatefulWidget {
     required this.token,
     required this.alreadyHasVoice,
     this.initialNumReferences = 0,
-    required this.onUploadMultiple,
+    required this.onUploadAdd,
+    required this.onUploadReplace,
     required this.onDelete,
     required this.onDone,
   });
@@ -44,19 +52,19 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
     _numRefs = widget.initialNumReferences;
   }
 
-  Future<void> _pickAndUpload({bool replace = false}) async {
-    final remaining = replace ? _maxRefs : _maxRefs - _numRefs;
-    if (remaining <= 0) return;
+  Future<void> _pickAndUpload({required bool replace}) async {
+    final slots = replace ? _maxRefs : _maxRefs - _numRefs;
+    if (slots <= 0) return;
 
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['wav', 'mp3', 'm4a', 'ogg'],
       withData: true,
-      allowMultiple: remaining > 1,
+      allowMultiple: slots > 1,
     );
     if (result == null || result.files.isEmpty) return;
 
-    final picked = result.files.take(remaining).toList();
+    final picked = result.files.take(slots).toList();
     final filesData = picked
         .where((f) => f.bytes != null)
         .map((f) => (bytes: f.bytes!, filename: f.name))
@@ -67,13 +75,18 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
     setState(() { _uploading = true; _error = null; _success = null; });
 
     try {
-      final total = await widget.onUploadMultiple(filesData);
+      // ✅ CLAVE: replace → endpoint que borra y reemplaza
+      //          add     → endpoint acumulativo que NO borra
+      final total = replace
+          ? await widget.onUploadReplace(filesData)
+          : await widget.onUploadAdd(filesData);
+
       setState(() {
         _hasVoice = true;
-        _numRefs = total; // siempre el total real que devuelve el servidor
+        _numRefs = total;
         _success =
         '✅ $_numRefs/$_maxRefs audio${_numRefs == 1 ? '' : 's'} guardado${_numRefs == 1 ? '' : 's'}.'
-            '${_numRefs < _maxRefs ? ' Puedes añadir más para mejorar la clonación.' : ' ¡Máximo alcanzado!'}';
+            '${_numRefs < _maxRefs ? ' Puedes añadir más para mejorar la clonación.' : ' ¡Calidad máxima!'}';
       });
     } catch (e) {
       setState(() => _error = e.toString());
@@ -240,7 +253,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               icon: Icons.upload_file_rounded,
               color: AppColors.accent,
               loading: _uploading,
-              onTap: () => _pickAndUpload(replace: true),
+              onTap: () => _pickAndUpload(replace: true),  // ← borra y reemplaza
             ),
 
             // ── Añadir más (solo si hay hueco) ───────────────────
@@ -252,7 +265,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                 icon: Icons.add_circle_outline_rounded,
                 color: AppColors.teal,
                 loading: _uploading,
-                onTap: () => _pickAndUpload(replace: false),
+                onTap: () => _pickAndUpload(replace: false),  // ← acumula sin borrar
                 outline: true,
               ),
             ],

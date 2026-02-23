@@ -46,7 +46,6 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    // El backend usa OAuth2PasswordRequestForm → form-data
     final res = await http
         .post(
       Uri.parse('$kServerUrl/auth/login'),
@@ -96,7 +95,6 @@ class VoiceApiService {
     'Content-Type': 'application/json',
   };
 
-  /// Devuelve {has_voice, num_references, cloned_at}
   Future<Map<String, dynamic>> checkVoiceStatusFull(String token) async {
     try {
       final res = await http
@@ -115,12 +113,17 @@ class VoiceApiService {
     return d['has_voice'] as bool? ?? false;
   }
 
-  /// Sube hasta 3 audios de golpe usando /voice/upload-multiple.
-  /// Devuelve el número de referencias guardadas.
-  Future<int> uploadMultipleAudios({
+  /// REEMPLAZA todo — borra los anteriores y sube los nuevos.
+  /// Usa /voice/upload-multiple (el backend borra antes de guardar).
+  /// Llámalo desde el botón "Reemplazar todo".
+  Future<int> uploadReplaceAudios({
     required String token,
     required List<({Uint8List bytes, String filename})> files,
   }) async {
+    // 1. Borrar primero
+    await deleteVoice(token);
+
+    // 2. Subir los nuevos
     final request = http.MultipartRequest(
         'POST', Uri.parse('$kServerUrl/voice/upload-multiple'))
       ..headers['Authorization'] = 'Bearer $token';
@@ -140,28 +143,34 @@ class VoiceApiService {
     return d['num_references'] as int? ?? files.length;
   }
 
-  /// Sube UN solo audio (sigue disponible por compatibilidad).
-  Future<void> uploadReferenceAudio({
+  /// ACUMULA — sube uno a uno sin borrar los anteriores.
+  /// Usa /voice/upload (acumulativo).
+  /// Llámalo desde el botón "Añadir más".
+  Future<int> uploadAddAudios({
     required String token,
-    required Uint8List bytes,
-    required String filename,
+    required List<({Uint8List bytes, String filename})> files,
   }) async {
-    final request =
-    http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload'))
-      ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(
-          http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    int lastTotal = 0;
+    for (final f in files) {
+      final request =
+      http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload'))
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(
+            http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename));
 
-    final streamed =
-    await request.send().timeout(const Duration(seconds: 60));
-    final res = await http.Response.fromStream(streamed);
+      final streamed =
+      await request.send().timeout(const Duration(seconds: 60));
+      final res = await http.Response.fromStream(streamed);
 
-    if (res.statusCode != 200) {
-      throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+      if (res.statusCode != 200) {
+        throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+      }
+      final d = jsonDecode(res.body) as Map<String, dynamic>;
+      lastTotal = d['num_references'] as int? ?? lastTotal + 1;
     }
+    return lastTotal;
   }
 
-  /// Devuelve los bytes MP3 de la síntesis
   Future<Uint8List> synthesize({
     required String token,
     required String text,
@@ -190,7 +199,6 @@ class VoiceApiService {
   }
 }
 
-// ── Helper ────────────────────────────────────────────────────────
 String _extractDetail(http.Response res) {
   try {
     final b = jsonDecode(res.body) as Map<String, dynamic>;
