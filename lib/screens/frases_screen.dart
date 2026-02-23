@@ -23,18 +23,26 @@ class _FrasesScreenState extends State<FrasesScreen> {
   String _categoriaActiva = 'Todas';
   List<FraseItem> _frasesPersonales = [];
 
+  // Índice de la frase que está siendo procesada/reproducida ahora mismo
+  // null = ninguna activa
+  int? _activeIndex;
+
   @override
   void initState() {
     super.initState();
     _tts = TtsService();
     _tts.onError = (msg) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(msg),
-            backgroundColor: AppColors.warn.withOpacity(0.9),
-          ));
-        }
-      };
+      if (mounted) {
+        setState(() => _activeIndex = null);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.warn.withOpacity(0.9),
+        ));
+      }
+    };
+    _tts.onDone = () {
+      if (mounted) setState(() => _activeIndex = null);
+    };
     _tts.init();
     _loadFrases();
   }
@@ -44,22 +52,28 @@ class _FrasesScreenState extends State<FrasesScreen> {
     if (mounted) setState(() => _frasesPersonales = list);
   }
 
-  Future<void> _hablar(String texto) async {
-    await _tts.speak(
+  Future<void> _hablar(int index, String texto) async {
+    // Si ya hay algo activo, ignorar el tap (el TtsService también lo bloquea)
+    if (_activeIndex != null) return;
+
+    setState(() => _activeIndex = index);
+
+    final ok = await _tts.speak(
       text: texto,
       settings: widget.settings,
       userToken: widget.user?.token,
       hasVoice: widget.user?.hasVoice ?? false,
     );
+
+    // Si speak devolvió false (bloqueado internamente), limpiamos igualmente
+    if (!ok && mounted) setState(() => _activeIndex = null);
   }
 
   List<FraseItem> get _frasesVisibles {
     final todas = [...frasesDefault, ..._frasesPersonales];
     if (_categoriaActiva == 'Todas') return todas;
     if (_categoriaActiva == 'Mis frases') return _frasesPersonales;
-    return todas
-        .where((f) => f.categoria == _categoriaActiva)
-        .toList();
+    return todas.where((f) => f.categoria == _categoriaActiva).toList();
   }
 
   void _mostrarDialogoAdd() {
@@ -85,11 +99,9 @@ class _FrasesScreenState extends State<FrasesScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle
               Center(
                 child: Container(
-                  width: 38,
-                  height: 4,
+                  width: 38, height: 4,
                   decoration: BoxDecoration(
                     color: AppColors.border,
                     borderRadius: BorderRadius.circular(2),
@@ -126,9 +138,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
                   final texto = controller.text.trim();
                   if (texto.isEmpty) return;
                   final nueva = FraseItem(
-                      texto: texto,
-                      categoria: catSel,
-                      esPersonal: true);
+                      texto: texto, categoria: catSel, esPersonal: true);
                   final updated = [..._frasesPersonales, nueva];
                   setState(() => _frasesPersonales = updated);
                   _settingsSvc.saveFrasesPersonales(updated);
@@ -161,15 +171,14 @@ class _FrasesScreenState extends State<FrasesScreen> {
           ),
           TextButton(
             onPressed: () {
-              final updated = _frasesPersonales
-                  .where((f) => f != frase)
-                  .toList();
+              final updated =
+              _frasesPersonales.where((f) => f != frase).toList();
               setState(() => _frasesPersonales = updated);
               _settingsSvc.saveFrasesPersonales(updated);
               Navigator.pop(context);
             },
-            child: const Text('Eliminar',
-                style: TextStyle(color: AppColors.warn)),
+            child:
+            const Text('Eliminar', style: TextStyle(color: AppColors.warn)),
           ),
         ],
       ),
@@ -188,10 +197,36 @@ class _FrasesScreenState extends State<FrasesScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(title: const Text('Frases rápidas')),
+      appBar: AppBar(
+        title: const Text('Frases rápidas'),
+        actions: [
+          // Indicador global de que hay síntesis en curso
+          if (_activeIndex != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 14, height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.accent.withOpacity(0.8),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Sintetizando...',
+                    style: TextStyle(
+                        color: AppColors.accent.withOpacity(0.8),
+                        fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
       body: Column(
         children: [
-          // ── Category selector ─────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: ChipRow(
@@ -202,44 +237,46 @@ class _FrasesScreenState extends State<FrasesScreen> {
             ),
           ),
           const Divider(color: AppColors.border, height: 1),
-
-          // ── Grid ──────────────────────────────────────
           Expanded(
             child: frases.isEmpty
                 ? const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.chat_bubble_outline,
-                            color: AppColors.textDim, size: 44),
-                        SizedBox(height: 12),
-                        Text('No hay frases en esta categoría',
-                            style: TextStyle(
-                                color: AppColors.textDim, fontSize: 14)),
-                      ],
-                    ),
-                  )
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.chat_bubble_outline,
+                      color: AppColors.textDim, size: 44),
+                  SizedBox(height: 12),
+                  Text('No hay frases en esta categoría',
+                      style: TextStyle(
+                          color: AppColors.textDim, fontSize: 14)),
+                ],
+              ),
+            )
                 : GridView.builder(
-                    padding: const EdgeInsets.all(14),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 1.65,
-                    ),
-                    itemCount: frases.length,
-                    itemBuilder: (_, i) {
-                      final frase = frases[i];
-                      return _FraseTile(
-                        frase: frase,
-                        onTap: () => _hablar(frase.texto),
-                        onLongPress: frase.esPersonal
-                            ? () => _confirmarEliminar(frase)
-                            : null,
-                      );
-                    },
-                  ),
+              padding: const EdgeInsets.all(14),
+              gridDelegate:
+              const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.65,
+              ),
+              itemCount: frases.length,
+              itemBuilder: (_, i) {
+                final frase = frases[i];
+                final isActive = _activeIndex == i;
+                final isBusy = _activeIndex != null && !isActive;
+                return _FraseTile(
+                  frase: frase,
+                  isActive: isActive,
+                  isBusy: isBusy,
+                  onTap: () => _hablar(i, frase.texto),
+                  onLongPress: frase.esPersonal
+                      ? () => _confirmarEliminar(frase)
+                      : null,
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -247,8 +284,8 @@ class _FrasesScreenState extends State<FrasesScreen> {
         onPressed: _mostrarDialogoAdd,
         backgroundColor: AppColors.accent,
         foregroundColor: AppColors.bg,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(Icons.add_rounded, size: 28),
       ),
     );
@@ -258,11 +295,15 @@ class _FrasesScreenState extends State<FrasesScreen> {
 // ── Frase tile ────────────────────────────────────────────────────
 class _FraseTile extends StatefulWidget {
   final FraseItem frase;
+  final bool isActive; // esta tile está siendo sintetizada/reproducida
+  final bool isBusy;  // otra tile está activa (esta queda bloqueada)
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
   const _FraseTile({
     required this.frase,
+    required this.isActive,
+    required this.isBusy,
     required this.onTap,
     this.onLongPress,
   });
@@ -299,62 +340,91 @@ class _FraseTileState extends State<_FraseTile>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _ctrl.reverse(),
-      onLongPress: widget.onLongPress,
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: _accent.withOpacity(0.3), width: 1),
-          ),
-          child: Stack(
-            children: [
-              // Left accent bar
-              Positioned(
-                left: 0, top: 8, bottom: 8,
-                child: Container(
-                  width: 3,
-                  decoration: BoxDecoration(
-                    color: _accent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+    // Opacidad reducida si otra tile está activa
+    final opacity = widget.isBusy ? 0.4 : 1.0;
+
+    return AnimatedOpacity(
+      opacity: opacity,
+      duration: const Duration(milliseconds: 200),
+      child: GestureDetector(
+        onTapDown: widget.isBusy ? null : (_) => _ctrl.forward(),
+        onTapUp: widget.isBusy
+            ? null
+            : (_) {
+          _ctrl.reverse();
+          widget.onTap();
+        },
+        onTapCancel: widget.isBusy ? null : () => _ctrl.reverse(),
+        onLongPress: widget.isBusy ? null : widget.onLongPress,
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: widget.isActive
+                  ? _accent.withOpacity(0.15)  // fondo iluminado cuando activa
+                  : AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: widget.isActive
+                    ? _accent.withOpacity(0.8)  // borde más vivo cuando activa
+                    : _accent.withOpacity(0.3),
+                width: widget.isActive ? 1.5 : 1,
               ),
-              // Personal star
-              if (widget.frase.esPersonal)
+            ),
+            child: Stack(
+              children: [
+                // Left accent bar
                 Positioned(
-                  top: 8, right: 8,
-                  child: Icon(Icons.star_rounded,
-                      size: 12,
-                      color: _accent.withOpacity(0.6)),
-                ),
-              // Text
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
-                child: Center(
-                  child: Text(
-                    widget.frase.texto,
-                    textAlign: TextAlign.center,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      height: 1.4,
+                  left: 0, top: 8, bottom: 8,
+                  child: Container(
+                    width: 3,
+                    decoration: BoxDecoration(
+                      color: _accent,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-              ),
-            ],
+                // Spinner cuando esta tile es la activa
+                if (widget.isActive)
+                  Positioned(
+                    top: 8, right: 8,
+                    child: SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: _accent,
+                      ),
+                    ),
+                  )
+                // Estrella personal (solo si no está activa)
+                else if (widget.frase.esPersonal)
+                  Positioned(
+                    top: 8, right: 8,
+                    child: Icon(Icons.star_rounded,
+                        size: 12, color: _accent.withOpacity(0.6)),
+                  ),
+                // Text
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+                  child: Center(
+                    child: Text(
+                      widget.frase.texto,
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: widget.isActive
+                            ? AppColors.textPrimary
+                            : AppColors.textPrimary,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

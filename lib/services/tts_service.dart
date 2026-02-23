@@ -10,6 +10,8 @@ class TtsService {
   final AudioPlayer _player = AudioPlayer();
   final FlutterTts _systemTts = FlutterTts();
 
+  // true desde que se llama a speak() hasta que termina de reproducir
+  // (incluye el tiempo de red de síntesis)
   bool _isSpeaking = false;
   bool get isSpeaking => _isSpeaking;
 
@@ -33,14 +35,17 @@ class TtsService {
     await _systemTts.awaitSpeakCompletion(true);
   }
 
-  Future<void> speak({
+  /// Devuelve false si ya hay síntesis en curso (petición ignorada).
+  /// Devuelve true cuando termina correctamente.
+  Future<bool> speak({
     required String text,
     required AppSettings settings,
     required String? userToken,
     required bool hasVoice,
     VozEmocion emocion = VozEmocion.neutral,
   }) async {
-    if (_isSpeaking) await stop();
+    // ── Bloqueo: ignorar si ya está procesando ────────────────────
+    if (_isSpeaking) return false;
     _isSpeaking = true;
 
     try {
@@ -60,14 +65,20 @@ class TtsService {
         await _systemTts.setVolume(settings.volumen);
         await _systemTts.setPitch(pitch);
         final result = await _systemTts.speak(text);
-        if (result != 1) { _isSpeaking = false; onError?.call('Error de voz del sistema'); }
+        if (result != 1) {
+          _isSpeaking = false;
+          onError?.call('Error de voz del sistema');
+        }
       }
+      return true;
     } on ApiException catch (e) {
       _isSpeaking = false;
       onError?.call(e.message);
+      return false;
     } catch (e) {
       _isSpeaking = false;
       onError?.call('Error de voz: $e');
+      return false;
     }
   }
 
@@ -77,7 +88,7 @@ class TtsService {
     await _player.setVolume(volume);
     await _player.play();
     await _player.processingStateStream.firstWhere(
-      (s) => s == ProcessingState.completed || s == ProcessingState.idle,
+          (s) => s == ProcessingState.completed || s == ProcessingState.idle,
     );
   }
 
