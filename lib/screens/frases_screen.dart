@@ -214,11 +214,25 @@ class _FrasesScreenState extends State<FrasesScreen> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    'Sintetizando...',
-                    style: TextStyle(
-                        color: AppColors.accent.withOpacity(0.8),
-                        fontSize: 12),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sintetizando...',
+                        style: TextStyle(
+                            color: AppColors.accent.withOpacity(0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      if (widget.user?.hasVoice ?? false)
+                        Text(
+                          'puede tardar hasta 60s',
+                          style: TextStyle(
+                              color: AppColors.textDim,
+                              fontSize: 10),
+                        ),
+                    ],
                   ),
                 ],
               ),

@@ -139,17 +139,42 @@ class _TextScreenState extends State<TextScreen> {
                 curve: Curves.easeInOut,
                 child: _showControls
                     ? _ControlPanel(
-                        velocidad: _velocidad,
-                        volumen: _volumen,
-                        emocion: _emocion,
-                        showVelocidad: !usingClonedVoice,
-                        onVelocidadChanged: (v) => setState(() => _velocidad = v),
-                        onVolumenChanged: (v) => setState(() => _volumen = v),
-                        onEmocionChanged: (e) => setState(() => _emocion = e),
-                      )
+                  velocidad: _velocidad,
+                  volumen: _volumen,
+                  emocion: _emocion,
+                  showVelocidad: !usingClonedVoice,
+                  onVelocidadChanged: (v) => setState(() => _velocidad = v),
+                  onVolumenChanged: (v) => setState(() => _volumen = v),
+                  onEmocionChanged: (e) => setState(() => _emocion = e),
+                )
                     : const SizedBox.shrink(),
               ),
               const Spacer(),
+              // Mensaje de progreso cuando hay voz clonada (puede tardar)
+              if (_isSpeaking && usingClonedVoice)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 12, height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: AppColors.accent.withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Sintetizando con tu voz... puede tardar hasta 60s',
+                        style: TextStyle(
+                          color: AppColors.textDim,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Center(
                 child: SpeakButton(
                   isSpeaking: _isSpeaking,
@@ -300,7 +325,7 @@ class _VoiceEngineBadge extends StatelessWidget {
             : AppColors.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: usingClonedVoice ? AppColors.teal : AppColors.border),
+            color: usingClonedVoice ? AppColors.teal : AppColors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

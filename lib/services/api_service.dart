@@ -182,7 +182,7 @@ class VoiceApiService {
       headers: _headers(token),
       body: jsonEncode({'text': text, 'speed': speed}),
     )
-        .timeout(const Duration(seconds: 30));
+        .timeout(const Duration(seconds: 90));
 
     if (res.statusCode == 200) return res.bodyBytes;
     throw ApiException(_extractDetail(res), statusCode: res.statusCode);
