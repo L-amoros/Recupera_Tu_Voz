@@ -24,7 +24,7 @@ class HomeScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(color: AppColors.accent, width: 1.8),
-                    color: AppColors.accent.withOpacity(0.06),
+                    color: AppColors.accent.withValues(alpha: 0.06),
                   ),
                   child: ClipOval(
                     child: Image.asset(

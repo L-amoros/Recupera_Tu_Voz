@@ -147,11 +147,11 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: (_hasVoice ? AppColors.teal : AppColors.accent)
-                    .withOpacity(0.08),
+                    .withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: (_hasVoice ? AppColors.teal : AppColors.accent)
-                      .withOpacity(0.3),
+                      .withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -189,7 +189,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                                     borderRadius: BorderRadius.circular(3),
                                     color: filled
                                         ? AppColors.teal
-                                        : AppColors.teal.withOpacity(0.2),
+                                        : AppColors.teal.withValues(alpha: 0.2),
                                   ),
                                 ),
                               );
@@ -200,7 +200,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                             '$_numRefs/$_maxRefs muestras  •  '
                                 '${_numRefs < _maxRefs ? 'Añade más para mejor calidad' : '¡Calidad máxima!'}',
                             style: TextStyle(
-                              color: AppColors.teal.withOpacity(0.8),
+                              color: AppColors.teal.withValues(alpha: 0.8),
                               fontSize: 11,
                             ),
                           ),
@@ -325,7 +325,7 @@ class _BigButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: outline ? Colors.transparent : color,
           borderRadius: BorderRadius.circular(12),
-          border: outline ? Border.all(color: color.withOpacity(0.5)) : null,
+          border: outline ? Border.all(color: color.withValues(alpha: 0.5)) : null,
         ),
         child: Center(
           child: loading

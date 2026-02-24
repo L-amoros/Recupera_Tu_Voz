@@ -123,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   width: 52, height: 52,
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.15),
+                    color: AppColors.accent.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.person_rounded,
@@ -161,13 +161,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: widget.user.hasVoice
-                    ? AppColors.teal.withOpacity(0.08)
-                    : AppColors.accent.withOpacity(0.08),
+                    ? AppColors.teal.withValues(alpha: 0.08)
+                    : AppColors.accent.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: widget.user.hasVoice
-                      ? AppColors.teal.withOpacity(0.35)
-                      : AppColors.accent.withOpacity(0.35),
+                      ? AppColors.teal.withValues(alpha: 0.35)
+                      : AppColors.accent.withValues(alpha: 0.35),
                 ),
               ),
               child: Row(

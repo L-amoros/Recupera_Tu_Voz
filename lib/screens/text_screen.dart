@@ -77,7 +77,7 @@ class _TextScreenState extends State<TextScreen> {
   void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: isError ? AppColors.warn.withOpacity(0.9) : AppColors.surface,
+      backgroundColor: isError ? AppColors.warn.withValues(alpha: 0.9) : AppColors.surface,
     ));
   }
 
@@ -161,7 +161,7 @@ class _TextScreenState extends State<TextScreen> {
                         width: 12, height: 12,
                         child: CircularProgressIndicator(
                           strokeWidth: 1.5,
-                          color: AppColors.accent.withOpacity(0.7),
+                          color: AppColors.accent.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -321,7 +321,7 @@ class _VoiceEngineBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: usingClonedVoice
-            ? AppColors.teal.withOpacity(0.12)
+            ? AppColors.teal.withValues(alpha: 0.12)
             : AppColors.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(

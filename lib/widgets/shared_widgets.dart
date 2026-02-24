@@ -76,7 +76,7 @@ class _WaveBarState extends State<WaveBar> with SingleTickerProviderStateMixin {
                 height: h,
                 margin: const EdgeInsets.symmetric(horizontal: 1.5),
                 decoration: BoxDecoration(
-                  color: widget.color.withOpacity(0.65),
+                  color: widget.color.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(2),
                 ),
               );
@@ -118,8 +118,8 @@ class SpeakButton extends StatelessWidget {
           gradient: isSpeaking
               ? LinearGradient(
                   colors: [
-                    AppColors.accent.withOpacity(0.22),
-                    AppColors.teal.withOpacity(0.12),
+                    AppColors.accent.withValues(alpha: 0.22),
+                    AppColors.teal.withValues(alpha: 0.12),
                   ],
                 )
               : null,
@@ -277,7 +277,7 @@ class ChipRow extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: sel ? color.withOpacity(0.15) : Colors.transparent,
+                color: sel ? color.withValues(alpha: 0.15) : Colors.transparent,
                 border: Border.all(
                   color: sel ? color : AppColors.border,
                   width: sel ? 1.4 : 1,

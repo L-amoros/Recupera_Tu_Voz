@@ -36,7 +36,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
         setState(() => _activeIndex = null);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg),
-          backgroundColor: AppColors.warn.withOpacity(0.9),
+          backgroundColor: AppColors.warn.withValues(alpha: 0.9),
         ));
       }
     };
@@ -210,7 +210,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
                     width: 14, height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.accent.withOpacity(0.8),
+                      color: AppColors.accent.withValues(alpha: 0.8),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -221,7 +221,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
                       Text(
                         'Sintetizando...',
                         style: TextStyle(
-                            color: AppColors.accent.withOpacity(0.8),
+                            color: AppColors.accent.withValues(alpha: 0.8),
                             fontSize: 12,
                             fontWeight: FontWeight.w600),
                       ),
@@ -376,13 +376,13 @@ class _FraseTileState extends State<_FraseTile>
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               color: widget.isActive
-                  ? _accent.withOpacity(0.15)  // fondo iluminado cuando activa
+                  ? _accent.withValues(alpha: 0.15)  // fondo iluminado cuando activa
                   : AppColors.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: widget.isActive
-                    ? _accent.withOpacity(0.8)  // borde más vivo cuando activa
-                    : _accent.withOpacity(0.3),
+                    ? _accent.withValues(alpha: 0.8)  // borde más vivo cuando activa
+                    : _accent.withValues(alpha: 0.3),
                 width: widget.isActive ? 1.5 : 1,
               ),
             ),
@@ -416,7 +416,7 @@ class _FraseTileState extends State<_FraseTile>
                   Positioned(
                     top: 8, right: 8,
                     child: Icon(Icons.star_rounded,
-                        size: 12, color: _accent.withOpacity(0.6)),
+                        size: 12, color: _accent.withValues(alpha: 0.6)),
                   ),
                 // Text
                 Padding(
