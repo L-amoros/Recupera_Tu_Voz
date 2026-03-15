@@ -54,5 +54,5 @@ const frasesDefault = [
 ];
 
 const categoriasAll = [
-  'Todas', 'Saludos', 'Necesidades', 'Respuestas', 'Urgente', 'Mis frases'
+  'Todas', 'Mis frases', 'Saludos', 'Necesidades', 'Respuestas', 'Urgente'
 ];

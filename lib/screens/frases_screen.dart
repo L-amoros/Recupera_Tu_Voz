@@ -1,9 +1,13 @@
 import "package:flutter/material.dart";
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import "../models/app_user.dart";
 import '../models/app_settings.dart';
 import '../models/frase_item.dart';
 import '../services/settings_service.dart';
 import '../services/tts_service.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 
@@ -50,6 +54,61 @@ class _FrasesScreenState extends State<FrasesScreen> {
   Future<void> _loadFrases() async {
     final list = await _settingsSvc.loadFrasesPersonales();
     if (mounted) setState(() => _frasesPersonales = list);
+  }
+
+  // Índice de la frase que está siendo preparada para compartir
+  int? _sharingIndex;
+
+  Future<void> _compartirAudio(int index, String texto) async {
+    // Solo si hay voz clonada disponible
+    if (widget.user?.token == null || !(widget.user?.hasVoice ?? false)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Necesitas tener una voz clonada para compartir audio'),
+        backgroundColor: Colors.orange,
+      ));
+      return;
+    }
+
+    if (_sharingIndex != null) return; // ya hay una compartición en curso
+
+    setState(() => _sharingIndex = index);
+
+    try {
+      final api = VoiceApiService();
+      final bytes = await api.synthesize(
+        token: widget.user!.token!,
+        text: texto,
+        speed: (widget.settings.velocidad + 0.5).clamp(0.5, 2.0),
+      );
+
+      // Guardar en archivo temporal
+      final dir = await getTemporaryDirectory();
+      final safeNombre = texto
+          .replaceAll(RegExp(r'[^\w\s]'), '')
+          .trim()
+          .replaceAll(' ', '_')
+          .substring(0, texto.length.clamp(0, 30));
+      final file = File('${dir.path}/voz_$safeNombre.mp3');
+      await file.writeAsBytes(bytes);
+
+      if (!mounted) return;
+
+      // Compartir con sheet nativo (permite elegir WhatsApp u otras apps)
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'audio/mpeg')],
+        text: texto,
+        subject: 'Audio generado por mi voz',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error al generar audio: $e'),
+          backgroundColor: AppColors.warn.withValues(alpha: 0.9),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _sharingIndex = null);
+    }
   }
 
   Future<void> _hablar(int index, String texto) async {
@@ -284,7 +343,11 @@ class _FrasesScreenState extends State<FrasesScreen> {
                   frase: frase,
                   isActive: isActive,
                   isBusy: isBusy,
+                  isSharing: _sharingIndex == i,
                   onTap: () => _hablar(i, frase.texto),
+                  onShare: (widget.user?.hasVoice ?? false)
+                      ? () => _compartirAudio(i, frase.texto)
+                      : null,
                   onLongPress: frase.esPersonal
                       ? () => _confirmarEliminar(frase)
                       : null,
@@ -311,15 +374,19 @@ class _FraseTile extends StatefulWidget {
   final FraseItem frase;
   final bool isActive; // esta tile está siendo sintetizada/reproducida
   final bool isBusy;  // otra tile está activa (esta queda bloqueada)
+  final bool isSharing; // generando audio para compartir
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onShare; // null = sin voz clonada
 
   const _FraseTile({
     required this.frase,
     required this.isActive,
     required this.isBusy,
+    required this.isSharing,
     required this.onTap,
     this.onLongPress,
+    this.onShare,
   });
 
   @override
@@ -399,6 +466,33 @@ class _FraseTileState extends State<_FraseTile>
                     ),
                   ),
                 ),
+                // ── Icono compartir (avión) — esquina superior izquierda ──
+                if (widget.onShare != null)
+                  Positioned(
+                    top: 5, left: 7,
+                    child: GestureDetector(
+                      onTap: widget.isBusy || widget.isSharing
+                          ? null
+                          : widget.onShare,
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.all(3),
+                        child: widget.isSharing
+                            ? SizedBox(
+                          width: 12, height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: _accent.withValues(alpha: 0.7),
+                          ),
+                        )
+                            : Icon(
+                          Icons.send_rounded,
+                          size: 13,
+                          color: _accent.withValues(alpha: 0.65),
+                        ),
+                      ),
+                    ),
+                  ),
                 // Spinner cuando esta tile es la activa
                 if (widget.isActive)
                   Positioned(
