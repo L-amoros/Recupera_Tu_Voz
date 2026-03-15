@@ -83,11 +83,11 @@ class _FrasesScreenState extends State<FrasesScreen> {
 
       // Guardar en archivo temporal
       final dir = await getTemporaryDirectory();
-      final safeNombre = texto
+      final _cleaned = texto
           .replaceAll(RegExp(r'[^\w\s]'), '')
           .trim()
-          .replaceAll(' ', '_')
-          .substring(0, texto.length.clamp(0, 30));
+          .replaceAll(' ', '_');
+      final safeNombre = _cleaned.substring(0, _cleaned.length.clamp(0, 30));
       final file = File('${dir.path}/voz_$safeNombre.mp3');
       await file.writeAsBytes(bytes);
 

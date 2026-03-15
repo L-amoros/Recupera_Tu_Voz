@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/app_settings.dart';
 import '../models/app_user.dart';
 import '../models/voz_emocion.dart';
 import '../services/tts_service.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 
@@ -21,6 +25,7 @@ class _TextScreenState extends State<TextScreen> {
 
   bool _isSpeaking = false;
   bool _isLoading = false;
+  bool _isSharing = false;
   bool _showControls = false;
   VozEmocion _emocion = VozEmocion.neutral;
   late double _velocidad;
@@ -72,6 +77,45 @@ class _TextScreenState extends State<TextScreen> {
       hasVoice: widget.user?.hasVoice ?? false,
       emocion: _emocion,
     );
+  }
+
+  Future<void> _compartir() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) { _showSnack('Escribe algo primero'); return; }
+    if (widget.user?.token == null || !(widget.user?.hasVoice ?? false)) {
+      _showSnack('Necesitas tener una voz clonada para compartir audio', isError: true);
+      return;
+    }
+    if (_isSharing || _isSpeaking) return;
+
+    setState(() => _isSharing = true);
+    try {
+      final api = VoiceApiService();
+      final bytes = await api.synthesize(
+        token: widget.user!.token!,
+        text: text,
+        speed: (_velocidad + 0.5).clamp(0.5, 2.0),
+      );
+      final dir = await getTemporaryDirectory();
+      final _cleaned = text
+          .replaceAll(RegExp(r'[^\w\s]'), '')
+          .trim()
+          .replaceAll(' ', '_');
+      final safeNombre = _cleaned.substring(0, _cleaned.length.clamp(0, 30));
+      final file = File('${dir.path}/voz_$safeNombre.mp3');
+      await file.writeAsBytes(bytes);
+
+      if (!mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'audio/mpeg')],
+        text: text,
+        subject: 'Audio generado por mi voz',
+      );
+    } catch (e) {
+      if (mounted) _showSnack('Error al generar audio: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
   }
 
   void _showSnack(String msg, {bool isError = false}) {
@@ -175,12 +219,22 @@ class _TextScreenState extends State<TextScreen> {
                     ],
                   ),
                 ),
-              Center(
-                child: SpeakButton(
-                  isSpeaking: _isSpeaking,
-                  isLoading: _isLoading,
-                  onTap: _speak,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SpeakButton(
+                    isSpeaking: _isSpeaking,
+                    isLoading: _isLoading,
+                    onTap: _speak,
+                  ),
+                  if (usingClonedVoice) ...[
+                    const SizedBox(width: 16),
+                    _ShareAudioButton(
+                      isSharing: _isSharing,
+                      onTap: _compartir,
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 24),
             ],
@@ -310,7 +364,51 @@ class _SliderRow extends StatelessWidget {
   }
 }
 
-// ── Voice engine badge ───────────────────────────────────────────
+// ── Share audio button ───────────────────────────────────────────
+class _ShareAudioButton extends StatelessWidget {
+  final bool isSharing;
+  final VoidCallback onTap;
+  const _ShareAudioButton({required this.isSharing, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isSharing ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: isSharing
+              ? AppColors.accent.withValues(alpha: 0.08)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSharing
+                ? AppColors.accent.withValues(alpha: 0.5)
+                : AppColors.border,
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: isSharing
+              ? SizedBox(
+            width: 20, height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.accent.withValues(alpha: 0.7),
+            ),
+          )
+              : const Icon(
+            Icons.send_rounded,
+            size: 22,
+            color: AppColors.accent,
+          ),
+        ),
+      ),
+    );
+  }
+}
 class _VoiceEngineBadge extends StatelessWidget {
   final bool usingClonedVoice;
   const _VoiceEngineBadge({required this.usingClonedVoice});
