@@ -37,6 +37,8 @@ class CloneVoiceScreen extends StatefulWidget {
 }
 
 class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
+  AdaptiveColors get c => AdaptiveColors.of(context);
+
   late bool _hasVoice;
   late int _numRefs;
   bool _uploading = false;
@@ -99,20 +101,20 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Eliminar voz',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text('¿Seguro que quieres eliminar tu voz clonada?',
-            style: TextStyle(color: AppColors.textMid)),
+        backgroundColor: c.surface,
+        title: Text('Eliminar voz',
+            style: TextStyle(color: c.textPrimary)),
+        content: Text('¿Seguro que quieres eliminar tu voz clonada?',
+            style: TextStyle(color: c.textMid)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppColors.textDim))),
+              child: Text('Cancelar',
+                  style: TextStyle(color: c.textDim))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Eliminar',
-                  style: TextStyle(color: AppColors.warn))),
+              child: Text('Eliminar',
+                  style: TextStyle(color: c.warn))),
         ],
       ),
     );
@@ -128,7 +130,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: c.bg,
       appBar: AppBar(
         title: const Text('Mi voz clonada'),
         leading: IconButton(
@@ -146,11 +148,11 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: (_hasVoice ? AppColors.teal : AppColors.accent)
+                color: (_hasVoice ? c.teal : c.accent)
                     .withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: (_hasVoice ? AppColors.teal : AppColors.accent)
+                  color: (_hasVoice ? c.teal : c.accent)
                       .withValues(alpha: 0.3),
                 ),
               ),
@@ -158,7 +160,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                 children: [
                   Icon(
                     _hasVoice ? Icons.check_circle_outline : Icons.mic_none_rounded,
-                    color: _hasVoice ? AppColors.teal : AppColors.accent,
+                    color: _hasVoice ? c.teal : c.accent,
                     size: 28,
                   ),
                   const SizedBox(width: 12),
@@ -171,7 +173,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                               ? 'Tienes una voz clonada activa.'
                               : 'No tienes voz clonada aún.',
                           style: TextStyle(
-                            color: _hasVoice ? AppColors.teal : AppColors.accent,
+                            color: _hasVoice ? c.teal : c.accent,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -188,8 +190,8 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(3),
                                     color: filled
-                                        ? AppColors.teal
-                                        : AppColors.teal.withValues(alpha: 0.2),
+                                        ? c.teal
+                                        : c.teal.withValues(alpha: 0.2),
                                   ),
                                 ),
                               );
@@ -200,14 +202,14 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                             '$_numRefs/$_maxRefs muestras  •  '
                                 '${_numRefs < _maxRefs ? 'Añade más para mejor calidad' : '¡Calidad máxima!'}',
                             style: TextStyle(
-                              color: AppColors.teal.withValues(alpha: 0.8),
+                              color: c.teal.withValues(alpha: 0.8),
                               fontSize: 11,
                             ),
                           ),
                         ] else
-                          const Text(
+                          Text(
                             'Sube hasta 3 audios para empezar.',
-                            style: TextStyle(color: AppColors.textDim, fontSize: 12),
+                            style: TextStyle(color: c.textDim, fontSize: 12),
                           ),
                       ],
                     ),
@@ -217,18 +219,18 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
             ),
             const SizedBox(height: 28),
 
-            const Text('Instrucciones',
+            Text('Instrucciones',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               '• Sube hasta 3 audios tuyos hablando con claridad\n'
                   '• Duración ideal por audio: 30 seg — 2 min\n'
                   '• Sin música ni ruido de fondo\n'
                   '• Formatos: WAV, MP3, M4A, OGG (máx. 20MB c/u)',
-              style: TextStyle(color: AppColors.textMid, fontSize: 13, height: 1.8),
+              style: TextStyle(color: c.textMid, fontSize: 13, height: 1.8),
             ),
             const SizedBox(height: 28),
 
@@ -236,13 +238,13 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Text(_error!,
-                    style: const TextStyle(color: AppColors.warn, fontSize: 13)),
+                    style: TextStyle(color: c.warn, fontSize: 13)),
               ),
             if (_success != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Text(_success!,
-                    style: const TextStyle(color: AppColors.teal, fontSize: 13)),
+                    style: TextStyle(color: c.teal, fontSize: 13)),
               ),
 
             // ── Botón principal ──────────────────────────────────
@@ -251,7 +253,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                   ? 'Reemplazar todo (subir nuevos)'
                   : 'Seleccionar audios y clonar',
               icon: Icons.upload_file_rounded,
-              color: AppColors.accent,
+              color: c.accent,
               loading: _uploading,
               onTap: () => _pickAndUpload(replace: true),  // ← borra y reemplaza
             ),
@@ -263,7 +265,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                 label: 'Añadir más audios '
                     '(${_maxRefs - _numRefs} libre${_maxRefs - _numRefs == 1 ? '' : 's'})',
                 icon: Icons.add_circle_outline_rounded,
-                color: AppColors.teal,
+                color: c.teal,
                 loading: _uploading,
                 onTap: () => _pickAndUpload(replace: false),  // ← acumula sin borrar
                 outline: true,
@@ -275,7 +277,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               _BigButton(
                 label: 'Eliminar voz clonada',
                 icon: Icons.delete_outline_rounded,
-                color: AppColors.warn,
+                color: c.warn,
                 loading: false,
                 onTap: _delete,
                 outline: true,
@@ -287,8 +289,8 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               Center(
                 child: TextButton(
                   onPressed: widget.onDone,
-                  child: const Text('← Volver a la app',
-                      style: TextStyle(color: AppColors.accent, fontSize: 15)),
+                  child: Text('← Volver a la app',
+                      style: TextStyle(color: c.accent, fontSize: 15)),
                 ),
               ),
           ],

@@ -17,15 +17,26 @@ void main() {
   runApp(const RecuperaTuVozApp());
 }
 
-class RecuperaTuVozApp extends StatelessWidget {
+class RecuperaTuVozApp extends StatefulWidget {
   const RecuperaTuVozApp({super.key});
+  @override
+  State<RecuperaTuVozApp> createState() => _RecuperaTuVozAppState();
+  static _RecuperaTuVozAppState of(BuildContext context) =>
+      context.findAncestorStateOfType<_RecuperaTuVozAppState>()!;
+}
 
+class _RecuperaTuVozAppState extends State<RecuperaTuVozApp> {
+  ThemeMode _themeMode = ThemeMode.dark;
+  void setTheme(bool oscuro) =>
+      setState(() => _themeMode = oscuro ? ThemeMode.dark : ThemeMode.light);
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Recupera tu voz',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: _themeMode,
       home: const AppRoot(),
     );
   }
@@ -75,6 +86,7 @@ class _AppRootState extends State<AppRoot> {
     }
 
     if (mounted) {
+      RecuperaTuVozApp.of(context).setTheme(settings.temaOscuro);
       setState(() {
         _user = syncedUser;
         _settings = settings;
@@ -101,7 +113,10 @@ class _AppRootState extends State<AppRoot> {
     if (mounted) setState(() => _user = null);
   }
 
-  void _onSettingsChanged(AppSettings s) => setState(() => _settings = s);
+  void _onSettingsChanged(AppSettings s) {
+    setState(() => _settings = s);
+    RecuperaTuVozApp.of(context).setTheme(s.temaOscuro);
+  }
 
   void _onUserChanged(AppUser u) {
     setState(() => _user = u);

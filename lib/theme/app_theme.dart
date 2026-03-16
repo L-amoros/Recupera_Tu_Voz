@@ -204,3 +204,24 @@ class ThemeProvider extends ChangeNotifier {
   void setDark()  { _mode = ThemeMode.dark;   notifyListeners(); }
   void setLight() { _mode = ThemeMode.light;  notifyListeners(); }
 }
+
+// ── Adaptive colors — use as: AppColors.of(context).bg etc. ──────
+class AdaptiveColors {
+  final bool _d;
+  const AdaptiveColors(this._d);
+  Color get bg          => _d ? AppColors.bg          : AppColors.bgLight;
+  Color get surface     => _d ? AppColors.surface      : AppColors.surfaceLight;
+  Color get surfaceHigh => _d ? AppColors.surfaceHigh  : AppColors.surfaceHighLight;
+  Color get border      => _d ? AppColors.border       : AppColors.borderLight;
+  Color get accent      => _d ? AppColors.accent       : AppColors.accentLight;
+  Color get teal        => _d ? AppColors.teal         : AppColors.tealLight;
+  Color get warn        => _d ? AppColors.warn         : AppColors.warnLight;
+  Color get gold        => _d ? AppColors.gold         : AppColors.goldLight;
+  Color get blue        => _d ? AppColors.blue         : AppColors.blueLight;
+  Color get purple      => _d ? AppColors.purple       : AppColors.purpleLight;
+  Color get textPrimary => _d ? AppColors.textPrimary  : AppColors.textPrimaryLight;
+  Color get textMid     => _d ? AppColors.textMid      : AppColors.textMidLight;
+  Color get textDim     => _d ? AppColors.textDim      : AppColors.textDimLight;
+  static AdaptiveColors of(BuildContext context) =>
+      AdaptiveColors(Theme.of(context).brightness == Brightness.dark);
+}

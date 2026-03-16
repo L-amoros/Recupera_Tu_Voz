@@ -21,6 +21,8 @@ class FrasesScreen extends StatefulWidget {
 }
 
 class _FrasesScreenState extends State<FrasesScreen> {
+  AdaptiveColors get c => AdaptiveColors.of(context);
+
   late final TtsService _tts;
   final SettingsService _settingsSvc = SettingsService();
 
@@ -40,7 +42,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
         setState(() => _activeIndex = null);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg),
-          backgroundColor: AppColors.warn.withValues(alpha: 0.9),
+          backgroundColor: c.warn.withValues(alpha: 0.9),
         ));
       }
     };
@@ -103,7 +105,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Error al generar audio: $e'),
-          backgroundColor: AppColors.warn.withValues(alpha: 0.9),
+          backgroundColor: c.warn.withValues(alpha: 0.9),
         ));
       }
     } finally {
@@ -142,7 +144,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -162,15 +164,15 @@ class _FrasesScreenState extends State<FrasesScreen> {
                 child: Container(
                   width: 38, height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: c.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 18),
-              const Text('Nueva frase',
+              Text('Nueva frase',
                   style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w700)),
               const SizedBox(height: 14),
@@ -215,18 +217,18 @@ class _FrasesScreenState extends State<FrasesScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Eliminar frase',
-            style: TextStyle(color: AppColors.textPrimary)),
+        backgroundColor: c.surface,
+        title: Text('Eliminar frase',
+            style: TextStyle(color: c.textPrimary)),
         content: Text(
           '"${frase.texto}"',
-          style: const TextStyle(color: AppColors.textMid),
+          style: TextStyle(color: c.textMid),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.textDim)),
+            child: Text('Cancelar',
+                style: TextStyle(color: c.textDim)),
           ),
           TextButton(
             onPressed: () {
@@ -237,7 +239,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
               Navigator.pop(context);
             },
             child:
-            const Text('Eliminar', style: TextStyle(color: AppColors.warn)),
+            Text('Eliminar', style: TextStyle(color: c.warn)),
           ),
         ],
       ),
@@ -255,7 +257,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
     final frases = _frasesVisibles;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: c.bg,
       appBar: AppBar(
         title: const Text('Frases rápidas'),
         actions: [
@@ -269,7 +271,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
                     width: 14, height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppColors.accent.withValues(alpha: 0.8),
+                      color: c.accent.withValues(alpha: 0.8),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -280,7 +282,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
                       Text(
                         'Sintetizando...',
                         style: TextStyle(
-                            color: AppColors.accent.withValues(alpha: 0.8),
+                            color: c.accent.withValues(alpha: 0.8),
                             fontSize: 12,
                             fontWeight: FontWeight.w600),
                       ),
@@ -288,7 +290,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
                         Text(
                           'puede tardar hasta 60s',
                           style: TextStyle(
-                              color: AppColors.textDim,
+                              color: c.textDim,
                               fontSize: 10),
                         ),
                     ],
@@ -309,19 +311,19 @@ class _FrasesScreenState extends State<FrasesScreen> {
               colorOf: AppColors.catColor,
             ),
           ),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: c.border, height: 1),
           Expanded(
             child: frases.isEmpty
-                ? const Center(
+                ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.chat_bubble_outline,
-                      color: AppColors.textDim, size: 44),
-                  SizedBox(height: 12),
+                      color: c.textDim, size: 44),
+                  const SizedBox(height: 12),
                   Text('No hay frases en esta categoría',
                       style: TextStyle(
-                          color: AppColors.textDim, fontSize: 14)),
+                          color: c.textDim, fontSize: 14)),
                 ],
               ),
             )
@@ -359,8 +361,8 @@ class _FrasesScreenState extends State<FrasesScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _mostrarDialogoAdd,
-        backgroundColor: AppColors.accent,
-        foregroundColor: AppColors.bg,
+        backgroundColor: c.accent,
+        foregroundColor: c.bg,
         shape:
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(Icons.add_rounded, size: 28),
@@ -395,6 +397,9 @@ class _FraseTile extends StatefulWidget {
 
 class _FraseTileState extends State<_FraseTile>
     with SingleTickerProviderStateMixin {
+  AdaptiveColors get c => AdaptiveColors.of(context);
+
+
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
 
@@ -444,7 +449,7 @@ class _FraseTileState extends State<_FraseTile>
             decoration: BoxDecoration(
               color: widget.isActive
                   ? _accent.withValues(alpha: 0.15)  // fondo iluminado cuando activa
-                  : AppColors.surface,
+                  : c.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: widget.isActive
@@ -523,8 +528,8 @@ class _FraseTileState extends State<_FraseTile>
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: widget.isActive
-                            ? AppColors.textPrimary
-                            : AppColors.textPrimary,
+                            ? c.textPrimary
+                            : c.textPrimary,
                         fontSize: 13,
                         height: 1.4,
                       ),

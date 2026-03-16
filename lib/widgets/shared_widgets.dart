@@ -21,6 +21,8 @@ class WaveBar extends StatefulWidget {
 }
 
 class _WaveBarState extends State<WaveBar> with SingleTickerProviderStateMixin {
+  AdaptiveColors get c => AdaptiveColors.of(context);
+
   late AnimationController _ctrl;
 
   @override
@@ -67,9 +69,9 @@ class _WaveBarState extends State<WaveBar> with SingleTickerProviderStateMixin {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: List.generate(widget.barCount, (i) {
               final base =
-                  _baseHeights[i % _baseHeights.length].toDouble();
+              _baseHeights[i % _baseHeights.length].toDouble();
               final factor =
-                  widget.animated ? (0.6 + 0.4 * _ctrl.value) : 1.0;
+              widget.animated ? (0.6 + 0.4 * _ctrl.value) : 1.0;
               final h = (base * factor).clamp(4.0, widget.height - 4);
               return Container(
                 width: 4,
@@ -103,6 +105,7 @@ class SpeakButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -112,33 +115,33 @@ class SpeakButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: isSpeaking ? AppColors.accent : AppColors.border,
+            color: isSpeaking ? c.accent : c.border,
             width: 1.8,
           ),
           gradient: isSpeaking
               ? LinearGradient(
-                  colors: [
-                    AppColors.accent.withValues(alpha: 0.22),
-                    AppColors.teal.withValues(alpha: 0.12),
-                  ],
-                )
+            colors: [
+              c.accent.withValues(alpha: 0.22),
+              c.teal.withValues(alpha: 0.12),
+            ],
+          )
               : null,
-          color: isSpeaking ? null : AppColors.surface,
+          color: isSpeaking ? null : c.surface,
         ),
         child: Center(
           child: isLoading
-              ? const SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.accent,
-                  ),
-                )
+              ? SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: c.accent,
+            ),
+          )
               : isSpeaking
-                  ? const Icon(Icons.stop_rounded,
-                      color: AppColors.accent, size: 38)
-                  : _WaveButtonIcon(),
+              ? Icon(Icons.stop_rounded,
+              color: c.accent, size: 38)
+              : _WaveButtonIcon(),
         ),
       ),
     );
@@ -148,6 +151,7 @@ class SpeakButton extends StatelessWidget {
 class _WaveButtonIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     const heights = [
       7.0, 14.0, 26.0, 34.0, 26.0, 18.0, 34.0, 26.0, 18.0, 26.0, 14.0, 7.0
     ];
@@ -160,10 +164,10 @@ class _WaveButtonIcon extends StatelessWidget {
           height: heights[i],
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
-              colors: [AppColors.teal, AppColors.accent],
+              colors: [c.teal, c.accent],
             ),
             borderRadius: BorderRadius.circular(3),
           ),
@@ -182,12 +186,13 @@ class SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Padding(
       padding: padding ?? EdgeInsets.zero,
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
-          color: AppColors.textDim,
+        style: TextStyle(
+          color: c.textDim,
           fontSize: 11,
           letterSpacing: 1.2,
           fontWeight: FontWeight.w600,
@@ -220,11 +225,12 @@ class AccentTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border, width: 1.2),
+        border: Border.all(color: c.border, width: 1.2),
         borderRadius: BorderRadius.circular(10),
-        color: AppColors.surface,
+        color: c.surface,
       ),
       child: TextField(
         controller: controller,
@@ -234,12 +240,12 @@ class AccentTextField extends StatelessWidget {
         textAlignVertical: expands ? TextAlignVertical.top : null,
         textInputAction: textInputAction,
         onSubmitted: onSubmitted != null ? (_) => onSubmitted!() : null,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+        style: TextStyle(color: c.textPrimary, fontSize: 15),
         decoration: InputDecoration(
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(14),
           hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textDim, fontSize: 15),
+          hintStyle: TextStyle(color: c.textDim, fontSize: 15),
         ),
       ),
     );
@@ -263,23 +269,24 @@ class ChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: options.map((opt) {
           final sel = opt == selected;
-          final color = colorOf?.call(opt) ?? AppColors.accent;
+          final color = colorOf?.call(opt) ?? c.accent;
           return GestureDetector(
             onTap: () => onSelect(opt),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               margin: const EdgeInsets.only(right: 8),
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: sel ? color.withValues(alpha: 0.15) : Colors.transparent,
                 border: Border.all(
-                  color: sel ? color : AppColors.border,
+                  color: sel ? color : c.border,
                   width: sel ? 1.4 : 1,
                 ),
                 borderRadius: BorderRadius.circular(22),
@@ -287,10 +294,10 @@ class ChipRow extends StatelessWidget {
               child: Text(
                 opt,
                 style: TextStyle(
-                  color: sel ? color : AppColors.textDim,
+                  color: sel ? color : c.textDim,
                   fontSize: 13,
                   fontWeight:
-                      sel ? FontWeight.w600 : FontWeight.normal,
+                  sel ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
             ),
@@ -316,21 +323,22 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppColors.accent;
+    final c = AdaptiveColors.of(context);
+    final clr = color ?? c.accent;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: c,
+          color: clr,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(
           child: Text(
             label,
-            style: const TextStyle(
-              color: AppColors.bg,
+            style: TextStyle(
+              color: c.bg,
               fontSize: 15,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
@@ -350,7 +358,7 @@ class AuthField extends StatelessWidget {
   final TextInputType? type;
   final VoidCallback? onSubmit;
 
-  const AuthField({
+  const AuthField({super.key,
     required this.ctrl,
     required this.label,
     required this.hint,
@@ -361,36 +369,37 @@ class AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: Text(label,
-              style: const TextStyle(
-                  color: AppColors.textMid,
+              style: TextStyle(
+                  color: c.textMid,
                   fontSize: 12,
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w600)),
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: c.surface,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: c.border),
           ),
           child: TextField(
             controller: ctrl,
             obscureText: obscure,
             keyboardType: type,
             onSubmitted: onSubmit != null ? (_) => onSubmit!() : null,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+            style: TextStyle(color: c.textPrimary, fontSize: 15),
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(14),
               hintText: hint,
               hintStyle:
-                  const TextStyle(color: AppColors.textDim, fontSize: 15),
+              TextStyle(color: c.textDim, fontSize: 15),
             ),
           ),
         ),
@@ -405,30 +414,31 @@ class AuthButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const AuthButton(
-      {required this.label, required this.loading, required this.onTap});
+      {super.key, required this.label, required this.loading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return GestureDetector(
       onTap: loading ? null : onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 15),
         decoration: BoxDecoration(
-          color: AppColors.accent,
+          color: c.accent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(
           child: loading
               ? const SizedBox(
-                  width: 22, height: 22,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
+              width: 22, height: 22,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white))
               : Text(label,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700)),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700)),
         ),
       ),
     );

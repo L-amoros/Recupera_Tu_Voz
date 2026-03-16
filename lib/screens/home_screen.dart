@@ -8,8 +8,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: c.bg,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -23,8 +24,8 @@ class HomeScreen extends StatelessWidget {
                   height: 116,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.accent, width: 1.8),
-                    color: AppColors.accent.withValues(alpha: 0.06),
+                    border: Border.all(color: c.accent, width: 1.8),
+                    color: c.accent.withValues(alpha: 0.06),
                   ),
                   child: ClipOval(
                     child: Image.asset(
@@ -35,21 +36,21 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
 
-                const Text(
+                Text(
                   'Recupera tu voz',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.4,
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Escribe y haz que todos te escuchen',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: AppColors.textMid,
+                    color: c.textMid,
                     fontSize: 14,
                   ),
                 ),
@@ -57,7 +58,7 @@ class HomeScreen extends StatelessWidget {
 
                 // ── Waveform ──────────────────────────────────
                 WaveBar(
-                  color: AppColors.accent,
+                  color: c.accent,
                   barCount: 30,
                   height: 44,
                 ),
@@ -66,8 +67,8 @@ class HomeScreen extends StatelessWidget {
                 // ── CTA ───────────────────────────────────────
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.accent, width: 1.6),
-                    foregroundColor: AppColors.accent,
+                    side: BorderSide(color: c.accent, width: 1.6),
+                    foregroundColor: c.accent,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 52, vertical: 15),
                     shape: RoundedRectangleBorder(

@@ -12,6 +12,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  AdaptiveColors get c => AdaptiveColors.of(context);
+
   final _emailCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
   bool _loading = false;
@@ -37,8 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: c.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -54,12 +57,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Center(child: Text('Recupera tu voz',
-                    style: TextStyle(color: AppColors.textPrimary,
+                Center(child: Text('Recupera tu voz',
+                    style: TextStyle(color: c.textPrimary,
                         fontSize: 26, fontWeight: FontWeight.w700))),
                 const SizedBox(height: 6),
-                const Center(child: Text('Inicia sesión para continuar',
-                    style: TextStyle(color: AppColors.textDim, fontSize: 14))),
+                Center(child: Text('Inicia sesión para continuar',
+                    style: TextStyle(color: c.textDim, fontSize: 14))),
                 const SizedBox(height: 40),
                 AuthField(ctrl: _emailCtrl, label: 'Email',
                     hint: 'tu@email.com', type: TextInputType.emailAddress),
@@ -68,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     hint: '••••••••', obscure: true, onSubmit: _submit),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppColors.warn, fontSize: 13)),
+                  Text(_error!, style: TextStyle(color: c.warn, fontSize: 13)),
                 ],
                 const SizedBox(height: 24),
                 AuthButton(label: 'Entrar', loading: _loading, onTap: _submit),
@@ -76,8 +79,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: GestureDetector(
                     onTap: widget.onGoRegister,
-                    child: const Text('¿No tienes cuenta? Regístrate',
-                        style: TextStyle(color: AppColors.accent, fontSize: 14)),
+                    child: Text('¿No tienes cuenta? Regístrate',
+                        style: TextStyle(color: c.accent, fontSize: 14)),
                   ),
                 ),
               ],

@@ -12,6 +12,8 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  AdaptiveColors get c => AdaptiveColors.of(context);
+
   final _nameCtrl  = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
@@ -42,8 +44,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: c.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -51,15 +54,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Center(child: Icon(Icons.person_add_outlined,
-                    size: 64, color: AppColors.accent)),
+                Center(child: Icon(Icons.person_add_outlined,
+                    size: 64, color: c.accent)),
                 const SizedBox(height: 16),
-                const Center(child: Text('Crear cuenta',
-                    style: TextStyle(color: AppColors.textPrimary,
+                Center(child: Text('Crear cuenta',
+                    style: TextStyle(color: c.textPrimary,
                         fontSize: 26, fontWeight: FontWeight.w700))),
                 const SizedBox(height: 6),
-                const Center(child: Text('Es gratis y solo toma un momento',
-                    style: TextStyle(color: AppColors.textDim, fontSize: 14))),
+                Center(child: Text('Es gratis y solo toma un momento',
+                    style: TextStyle(color: c.textDim, fontSize: 14))),
                 const SizedBox(height: 40),
                 AuthField(ctrl: _nameCtrl, label: 'Nombre', hint: 'Tu nombre'),
                 const SizedBox(height: 14),
@@ -70,7 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     hint: 'Mínimo 6 caracteres', obscure: true, onSubmit: _submit),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppColors.warn, fontSize: 13)),
+                  Text(_error!, style: TextStyle(color: c.warn, fontSize: 13)),
                 ],
                 const SizedBox(height: 24),
                 AuthButton(label: 'Crear cuenta', loading: _loading, onTap: _submit),
@@ -78,8 +81,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Center(
                   child: GestureDetector(
                     onTap: widget.onGoLogin,
-                    child: const Text('¿Ya tienes cuenta? Inicia sesión',
-                        style: TextStyle(color: AppColors.accent, fontSize: 14)),
+                    child: Text('¿Ya tienes cuenta? Inicia sesión',
+                        style: TextStyle(color: c.accent, fontSize: 14)),
                   ),
                 ),
               ],

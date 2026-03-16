@@ -26,6 +26,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  AdaptiveColors get c => AdaptiveColors.of(context);
+
   late AppSettings _settings;
   final SettingsService _svc = SettingsService();
 
@@ -52,24 +54,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Idioma',
-            style: TextStyle(color: AppColors.textPrimary)),
+        backgroundColor: c.surface,
+        title: Text('Idioma',
+            style: TextStyle(color: c.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: idiomas
               .map((lang) => RadioListTile<String>(
-                    value: lang,
-                    groupValue: _settings.idioma,
-                    activeColor: AppColors.accent,
-                    title: Text(lang,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary, fontSize: 14)),
-                    onChanged: (v) {
-                      _update(_settings.copyWith(idioma: v));
-                      Navigator.pop(context);
-                    },
-                  ))
+            value: lang,
+            groupValue: _settings.idioma,
+            activeColor: c.accent,
+            title: Text(lang,
+                style: TextStyle(
+                    color: c.textPrimary, fontSize: 14)),
+            onChanged: (v) {
+              _update(_settings.copyWith(idioma: v));
+              Navigator.pop(context);
+            },
+          ))
               .toList(),
         ),
       ),
@@ -80,23 +82,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Cerrar sesión',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text('¿Seguro que quieres cerrar sesión?',
-            style: TextStyle(color: AppColors.textMid)),
+        backgroundColor: c.surface,
+        title: Text('Cerrar sesión',
+            style: TextStyle(color: c.textPrimary)),
+        content: Text('¿Seguro que quieres cerrar sesión?',
+            style: TextStyle(color: c.textMid)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppColors.textDim))),
+              child: Text('Cancelar',
+                  style: TextStyle(color: c.textDim))),
           TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 widget.onLogout();
               },
-              child: const Text('Cerrar sesión',
-                  style: TextStyle(color: AppColors.warn))),
+              child: Text('Cerrar sesión',
+                  style: TextStyle(color: c.warn))),
         ],
       ),
     );
@@ -105,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: c.bg,
       appBar: AppBar(title: const Text('Perfil')),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -115,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             margin: const EdgeInsets.only(bottom: 20),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: c.surface,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -123,11 +125,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   width: 52, height: 52,
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.15),
+                    color: c.accent.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.person_rounded,
-                      color: AppColors.accent, size: 28),
+                  child: Icon(Icons.person_rounded,
+                      color: c.accent, size: 28),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -136,15 +138,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(
                         widget.user.name.isEmpty ? 'Sin nombre' : widget.user.name,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary,
+                        style: TextStyle(
+                            color: c.textPrimary,
                             fontSize: 16,
                             fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 3),
                       Text(widget.user.email,
-                          style: const TextStyle(
-                              color: AppColors.textMid, fontSize: 12)),
+                          style: TextStyle(
+                              color: c.textMid, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -153,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
 
           // ── Mi voz ───────────────────────────────────────────
-          SectionLabel('Mi voz'),
+          const SectionLabel('Mi voz'),
           const SizedBox(height: 8),
           GestureDetector(
             onTap: widget.onCloneVoice,
@@ -161,13 +163,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: widget.user.hasVoice
-                    ? AppColors.teal.withValues(alpha: 0.08)
-                    : AppColors.accent.withValues(alpha: 0.08),
+                    ? c.teal.withValues(alpha: 0.08)
+                    : c.accent.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: widget.user.hasVoice
-                      ? AppColors.teal.withValues(alpha: 0.35)
-                      : AppColors.accent.withValues(alpha: 0.35),
+                      ? c.teal.withValues(alpha: 0.35)
+                      : c.accent.withValues(alpha: 0.35),
                 ),
               ),
               child: Row(
@@ -177,8 +179,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? Icons.graphic_eq_rounded
                         : Icons.mic_none_rounded,
                     color: widget.user.hasVoice
-                        ? AppColors.teal
-                        : AppColors.accent,
+                        ? c.teal
+                        : c.accent,
                     size: 26,
                   ),
                   const SizedBox(width: 14),
@@ -192,8 +194,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               : 'Clonar mi voz',
                           style: TextStyle(
                             color: widget.user.hasVoice
-                                ? AppColors.teal
-                                : AppColors.accent,
+                                ? c.teal
+                                : c.accent,
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
@@ -203,14 +205,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           widget.user.hasVoice
                               ? 'Toca para gestionar tu voz'
                               : 'Sube un audio para que la app hable con tu voz',
-                          style: const TextStyle(
-                              color: AppColors.textMid, fontSize: 12),
+                          style: TextStyle(
+                              color: c.textMid, fontSize: 12),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right,
-                      color: AppColors.textDim, size: 18),
+                  Icon(Icons.chevron_right,
+                      color: c.textDim, size: 18),
                 ],
               ),
             ),
@@ -218,8 +220,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 20),
 
           // ── Ajustes ───────────────────────────────────────────
-          SectionLabel('Ajustes'),
+          const SectionLabel('Ajustes'),
           const SizedBox(height: 8),
+          // ── Toggle tema ───────────────────────────────────────
+          Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: c.surface,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _settings.temaOscuro ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  size: 18,
+                  color: _settings.temaOscuro ? c.textMid : c.gold,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _settings.temaOscuro ? 'Tema oscuro' : 'Tema claro',
+                    style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                Switch(
+                  value: !_settings.temaOscuro,
+                  onChanged: (claro) => _update(_settings.copyWith(temaOscuro: !claro)),
+                ),
+              ],
+            ),
+          ),
           _Tile(
             label: 'Idioma',
             value: _settings.idioma,
@@ -242,22 +273,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 20),
 
           // ── Sesión ────────────────────────────────────────────
-          SectionLabel('Sesión'),
+          const SectionLabel('Sesión'),
           const SizedBox(height: 8),
           GestureDetector(
             onTap: _confirmLogout,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.logout_rounded, color: AppColors.warn, size: 18),
-                  SizedBox(width: 10),
+                  Icon(Icons.logout_rounded, color: c.warn, size: 18),
+                  const SizedBox(width: 10),
                   Text('Cerrar sesión',
-                      style: TextStyle(color: AppColors.warn, fontSize: 14)),
+                      style: TextStyle(color: c.warn, fontSize: 14)),
                 ],
               ),
             ),
@@ -278,27 +309,28 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+            color: c.surface, borderRadius: BorderRadius.circular(10)),
         child: Row(
           children: [
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 14,
-                      fontWeight: FontWeight.w500)),
-                  if (value != null)
-                    Text(value!, style: const TextStyle(
-                        color: AppColors.textMid, fontSize: 12)),
-                ]),
+                  children: [
+                    Text(label, style: TextStyle(
+                        color: c.textPrimary, fontSize: 14,
+                        fontWeight: FontWeight.w500)),
+                    if (value != null)
+                      Text(value!, style: TextStyle(
+                          color: c.textMid, fontSize: 12)),
+                  ]),
             ),
             if (onTap != null)
-              const Icon(Icons.chevron_right, color: AppColors.textDim, size: 18),
+              Icon(Icons.chevron_right, color: c.textDim, size: 18),
           ],
         ),
       ),
@@ -311,22 +343,23 @@ class _SliderTile extends StatelessWidget {
   final double value, min, max;
   final ValueChanged<double> onChanged;
   const _SliderTile({required this.label, required this.value,
-      required this.min, required this.max, required this.onChanged});
+    required this.min, required this.max, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
       decoration: BoxDecoration(
-        color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+          color: c.surface, borderRadius: BorderRadius.circular(10)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(
-            color: AppColors.textPrimary, fontSize: 14,
+        Text(label, style: TextStyle(
+            color: c.textPrimary, fontSize: 14,
             fontWeight: FontWeight.w500)),
         Slider(
           value: value, min: min, max: max,
-          activeColor: AppColors.accent,
-          inactiveColor: AppColors.border,
+          activeColor: c.accent,
+          inactiveColor: c.border,
           onChanged: onChanged,
         ),
       ]),

@@ -20,6 +20,8 @@ class TextScreen extends StatefulWidget {
 }
 
 class _TextScreenState extends State<TextScreen> {
+  AdaptiveColors get c => AdaptiveColors.of(context);
+
   final TextEditingController _controller = TextEditingController();
   late final TtsService _tts;
 
@@ -121,7 +123,7 @@ class _TextScreenState extends State<TextScreen> {
   void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: isError ? AppColors.warn.withValues(alpha: 0.9) : AppColors.surface,
+      backgroundColor: isError ? c.warn.withValues(alpha: 0.9) : c.surface,
     ));
   }
 
@@ -133,7 +135,7 @@ class _TextScreenState extends State<TextScreen> {
     final usingClonedVoice = (widget.user?.hasVoice ?? false) && widget.user != null;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: c.bg,
       appBar: AppBar(
         title: const Text('Texto a voz'),
         actions: [
@@ -154,21 +156,21 @@ class _TextScreenState extends State<TextScreen> {
               Container(
                 height: 170,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: c.surface,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: c.border),
                 ),
                 child: TextField(
                   controller: _controller,
                   maxLines: null,
                   expands: true,
                   textAlignVertical: TextAlignVertical.top,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, height: 1.5),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: c.textPrimary, fontSize: 16, height: 1.5),
+                  decoration: InputDecoration(
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(14),
+                    contentPadding: const EdgeInsets.all(14),
                     hintText: 'Escribe aquí...',
-                    hintStyle: TextStyle(color: AppColors.textDim, fontSize: 16),
+                    hintStyle: TextStyle(color: c.textDim, fontSize: 16),
                   ),
                 ),
               ),
@@ -205,14 +207,14 @@ class _TextScreenState extends State<TextScreen> {
                         width: 12, height: 12,
                         child: CircularProgressIndicator(
                           strokeWidth: 1.5,
-                          color: AppColors.accent.withValues(alpha: 0.7),
+                          color: c.accent.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Sintetizando con tu voz... puede tardar hasta 60s',
                         style: TextStyle(
-                          color: AppColors.textDim,
+                          color: c.textDim,
                           fontSize: 12,
                         ),
                       ),
@@ -254,24 +256,25 @@ class _ControlsToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: c.surface,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: c.border),
         ),
         child: Row(
           children: [
-            const Icon(Icons.tune_rounded, size: 16, color: AppColors.textMid),
+            Icon(Icons.tune_rounded, size: 16, color: c.textMid),
             const SizedBox(width: 8),
             Text('Controles · ${emocion.label}',
-                style: const TextStyle(color: AppColors.textMid, fontSize: 13)),
+                style: TextStyle(color: c.textMid, fontSize: 13)),
             const Spacer(),
             Icon(open ? Icons.expand_less : Icons.expand_more,
-                color: AppColors.textDim, size: 18),
+                color: c.textDim, size: 18),
           ],
         ),
       ),
@@ -296,13 +299,14 @@ class _ControlPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Container(
       margin: const EdgeInsets.only(top: 6),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,8 +321,8 @@ class _ControlPanel extends StatelessWidget {
           ],
           _SliderRow(label: 'Volumen', value: volumen, onChanged: onVolumenChanged),
           const SizedBox(height: 10),
-          const Text('Emoción',
-              style: TextStyle(color: AppColors.textMid, fontSize: 12)),
+          Text('Emoción',
+              style: TextStyle(color: c.textMid, fontSize: 12)),
           const SizedBox(height: 6),
           const SizedBox(height: 6),
           ChipRow(
@@ -343,19 +347,20 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Row(
       children: [
         SizedBox(
           width: 72,
           child: Text(label,
-              style: const TextStyle(color: AppColors.textMid, fontSize: 12)),
+              style: TextStyle(color: c.textMid, fontSize: 12)),
         ),
         Expanded(
           child: Slider(
             value: value,
             min: 0.1, max: 1.0,
-            activeColor: AppColors.accent,
-            inactiveColor: AppColors.border,
+            activeColor: c.accent,
+            inactiveColor: c.border,
             onChanged: onChanged,
           ),
         ),
@@ -372,6 +377,7 @@ class _ShareAudioButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return GestureDetector(
       onTap: isSharing ? null : onTap,
       child: AnimatedContainer(
@@ -380,13 +386,13 @@ class _ShareAudioButton extends StatelessWidget {
         height: 56,
         decoration: BoxDecoration(
           color: isSharing
-              ? AppColors.accent.withValues(alpha: 0.08)
-              : AppColors.surface,
+              ? c.accent.withValues(alpha: 0.08)
+              : c.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSharing
-                ? AppColors.accent.withValues(alpha: 0.5)
-                : AppColors.border,
+                ? c.accent.withValues(alpha: 0.5)
+                : c.border,
             width: 1.5,
           ),
         ),
@@ -396,13 +402,13 @@ class _ShareAudioButton extends StatelessWidget {
             width: 20, height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: AppColors.accent.withValues(alpha: 0.7),
+              color: c.accent.withValues(alpha: 0.7),
             ),
           )
-              : const Icon(
+              : Icon(
             Icons.send_rounded,
             size: 22,
-            color: AppColors.accent,
+            color: c.accent,
           ),
         ),
       ),
@@ -415,15 +421,16 @@ class _VoiceEngineBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: usingClonedVoice
-            ? AppColors.teal.withValues(alpha: 0.12)
-            : AppColors.surface,
+            ? c.teal.withValues(alpha: 0.12)
+            : c.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-            color: usingClonedVoice ? AppColors.teal : AppColors.border),
+            color: usingClonedVoice ? c.teal : c.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -431,13 +438,13 @@ class _VoiceEngineBadge extends StatelessWidget {
           Icon(
             usingClonedVoice ? Icons.graphic_eq_rounded : Icons.speaker_phone_outlined,
             size: 13,
-            color: usingClonedVoice ? AppColors.teal : AppColors.textDim,
+            color: usingClonedVoice ? c.teal : c.textDim,
           ),
           const SizedBox(width: 5),
           Text(
             usingClonedVoice ? 'Mi voz' : 'Sistema',
             style: TextStyle(
-              color: usingClonedVoice ? AppColors.teal : AppColors.textDim,
+              color: usingClonedVoice ? c.teal : c.textDim,
               fontSize: 11, fontWeight: FontWeight.w600,
             ),
           ),
