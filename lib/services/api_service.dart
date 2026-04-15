@@ -4,10 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_user.dart';
 
-// ── Cambia esta IP por la de tu PC en la red WiFi ─────────────────
-// Windows: ipconfig → Dirección IPv4
-// Mac/Linux: ifconfig → inet
-const String kServerUrl = 'https://mirian-eriophyllous-serriedly.ngrok-free.dev'; //ngrok http 8880
+const String kServerUrl = 'https://mirian-eriophyllous-serriedly.ngrok-free.dev';
 
 class ApiException implements Exception {
   final String message;
@@ -32,11 +29,7 @@ class AuthService {
         .post(
       Uri.parse('$kServerUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email.trim(),
-        'password': password,
-        'name': name.trim(),
-      }),
+      body: jsonEncode({'email': email.trim(), 'password': password, 'name': name.trim()}),
     )
         .timeout(const Duration(seconds: 15));
     return _parseAuth(res);
@@ -52,6 +45,18 @@ class AuthService {
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: 'username=${Uri.encodeComponent(email.trim())}'
           '&password=${Uri.encodeComponent(password)}',
+    )
+        .timeout(const Duration(seconds: 15));
+    return _parseAuth(res);
+  }
+
+  /// Envía el ID token de Google al backend y obtiene sesión.
+  Future<AppUser> loginWithGoogle(String idToken) async {
+    final res = await http
+        .post(
+      Uri.parse('$kServerUrl/auth/google'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'id_token': idToken}),
     )
         .timeout(const Duration(seconds: 15));
     return _parseAuth(res);
@@ -87,7 +92,7 @@ class AuthService {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// VOICE API SERVICE
+// VOICE API SERVICE  (sin cambios)
 // ─────────────────────────────────────────────────────────────────
 class VoiceApiService {
   Map<String, String> _headers(String token) => {
@@ -98,8 +103,7 @@ class VoiceApiService {
   Future<Map<String, dynamic>> checkVoiceStatusFull(String token) async {
     try {
       final res = await http
-          .get(Uri.parse('$kServerUrl/voice/status'),
-          headers: _headers(token))
+          .get(Uri.parse('$kServerUrl/voice/status'), headers: _headers(token))
           .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
@@ -113,58 +117,35 @@ class VoiceApiService {
     return d['has_voice'] as bool? ?? false;
   }
 
-  /// REEMPLAZA todo — borra los anteriores y sube los nuevos.
-  /// Usa /voice/upload-multiple (el backend borra antes de guardar).
-  /// Llámalo desde el botón "Reemplazar todo".
   Future<int> uploadReplaceAudios({
     required String token,
     required List<({Uint8List bytes, String filename})> files,
   }) async {
-    // 1. Borrar primero
     await deleteVoice(token);
-
-    // 2. Subir los nuevos
-    final request = http.MultipartRequest(
-        'POST', Uri.parse('$kServerUrl/voice/upload-multiple'))
+    final request = http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload-multiple'))
       ..headers['Authorization'] = 'Bearer $token';
-
     for (final f in files) {
-      request.files.add(
-          http.MultipartFile.fromBytes('files', f.bytes, filename: f.filename));
+      request.files.add(http.MultipartFile.fromBytes('files', f.bytes, filename: f.filename));
     }
-
     final streamed = await request.send().timeout(const Duration(seconds: 120));
     final res = await http.Response.fromStream(streamed);
-
-    if (res.statusCode != 200) {
-      throw ApiException(_extractDetail(res), statusCode: res.statusCode);
-    }
+    if (res.statusCode != 200) throw ApiException(_extractDetail(res), statusCode: res.statusCode);
     final d = jsonDecode(res.body) as Map<String, dynamic>;
     return d['num_references'] as int? ?? files.length;
   }
 
-  /// ACUMULA — sube uno a uno sin borrar los anteriores.
-  /// Usa /voice/upload (acumulativo).
-  /// Llámalo desde el botón "Añadir más".
   Future<int> uploadAddAudios({
     required String token,
     required List<({Uint8List bytes, String filename})> files,
   }) async {
     int lastTotal = 0;
     for (final f in files) {
-      final request =
-      http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload'))
+      final request = http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload'))
         ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(
-            http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename));
-
-      final streamed =
-      await request.send().timeout(const Duration(seconds: 60));
+        ..files.add(http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename));
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
       final res = await http.Response.fromStream(streamed);
-
-      if (res.statusCode != 200) {
-        throw ApiException(_extractDetail(res), statusCode: res.statusCode);
-      }
+      if (res.statusCode != 200) throw ApiException(_extractDetail(res), statusCode: res.statusCode);
       final d = jsonDecode(res.body) as Map<String, dynamic>;
       lastTotal = d['num_references'] as int? ?? lastTotal + 1;
     }
@@ -183,19 +164,15 @@ class VoiceApiService {
       body: jsonEncode({'text': text, 'speed': speed}),
     )
         .timeout(const Duration(seconds: 90));
-
     if (res.statusCode == 200) return res.bodyBytes;
     throw ApiException(_extractDetail(res), statusCode: res.statusCode);
   }
 
   Future<void> deleteVoice(String token) async {
     final res = await http
-        .delete(Uri.parse('$kServerUrl/voice/'),
-        headers: _headers(token))
+        .delete(Uri.parse('$kServerUrl/voice/'), headers: _headers(token))
         .timeout(const Duration(seconds: 10));
-    if (res.statusCode != 200) {
-      throw ApiException(_extractDetail(res), statusCode: res.statusCode);
-    }
+    if (res.statusCode != 200) throw ApiException(_extractDetail(res), statusCode: res.statusCode);
   }
 }
 

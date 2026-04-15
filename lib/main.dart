@@ -19,16 +19,23 @@ void main() {
 
 class RecuperaTuVozApp extends StatefulWidget {
   const RecuperaTuVozApp({super.key});
+
   @override
   State<RecuperaTuVozApp> createState() => _RecuperaTuVozAppState();
+
   static _RecuperaTuVozAppState of(BuildContext context) =>
       context.findAncestorStateOfType<_RecuperaTuVozAppState>()!;
 }
 
 class _RecuperaTuVozAppState extends State<RecuperaTuVozApp> {
   ThemeMode _themeMode = ThemeMode.dark;
-  void setTheme(bool oscuro) =>
-      setState(() => _themeMode = oscuro ? ThemeMode.dark : ThemeMode.light);
+
+  void setTheme(bool oscuro) {
+    setState(() {
+      _themeMode = oscuro ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -42,7 +49,10 @@ class _RecuperaTuVozAppState extends State<RecuperaTuVozApp> {
   }
 }
 
-// ── AppRoot: gestiona sesión ───────────────────────────────────────
+// ─────────────────────────────────────────
+// ROOT APP (LOGIN / SESSION)
+// ─────────────────────────────────────────
+
 class AppRoot extends StatefulWidget {
   const AppRoot({super.key});
 
@@ -70,23 +80,20 @@ class _AppRootState extends State<AppRoot> {
     final user = await _auth.loadUser();
     final settings = await _settingsSvc.loadSettings();
 
-    // Si hay sesión activa, sincronizamos num_references con el servidor
     AppUser? syncedUser = user;
+
     if (user != null) {
       try {
         final status = await _voiceApi.checkVoiceStatusFull(user.token);
         syncedUser = user.copyWith(
-          hasVoice: status['has_voice'] as bool? ?? user.hasVoice,
-          numReferences: status['num_references'] as int? ?? user.numReferences,
+          hasVoice: status['has_voice'] ?? user.hasVoice,
+          numReferences: status['num_references'] ?? user.numReferences,
         );
         await _auth.saveUser(syncedUser);
-      } catch (_) {
-        // Si falla la red, usamos los datos locales guardados
-      }
+      } catch (_) {}
     }
 
     if (mounted) {
-      RecuperaTuVozApp.of(context).setTheme(settings.temaOscuro);
       setState(() {
         _user = syncedUser;
         _settings = settings;
@@ -101,11 +108,24 @@ class _AppRootState extends State<AppRoot> {
     if (mounted) setState(() => _user = user);
   }
 
+  // 🔥 LOGIN GOOGLE
+  Future<void> _loginWithGoogle(String idToken) async {
+    final user = await _auth.loginWithGoogle(idToken);
+    await _auth.saveUser(user);
+    if (mounted) setState(() => _user = user);
+  }
+
   Future<void> _register(String name, String email, String password) async {
     final user =
     await _auth.register(name: name, email: email, password: password);
     await _auth.saveUser(user);
-    if (mounted) setState(() { _user = user; _showRegister = false; });
+
+    if (mounted) {
+      setState(() {
+        _user = user;
+        _showRegister = false;
+      });
+    }
   }
 
   Future<void> _logout() async {
@@ -113,22 +133,11 @@ class _AppRootState extends State<AppRoot> {
     if (mounted) setState(() => _user = null);
   }
 
-  void _onSettingsChanged(AppSettings s) {
-    setState(() => _settings = s);
-    RecuperaTuVozApp.of(context).setTheme(s.temaOscuro);
-  }
-
-  void _onUserChanged(AppUser u) {
-    setState(() => _user = u);
-    _auth.saveUser(u); // persiste numReferences junto con todo lo demás
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: AppColors.bg,
-        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -139,8 +148,10 @@ class _AppRootState extends State<AppRoot> {
           onGoLogin: () => setState(() => _showRegister = false),
         );
       }
+
       return LoginScreen(
         onLogin: _login,
+        onGoogleLogin: _loginWithGoogle,
         onGoRegister: () => setState(() => _showRegister = true),
       );
     }
@@ -148,14 +159,23 @@ class _AppRootState extends State<AppRoot> {
     return AppShell(
       user: _user!,
       settings: _settings,
-      onSettingsChanged: _onSettingsChanged,
-      onUserChanged: _onUserChanged,
+      onSettingsChanged: (s) {
+        setState(() => _settings = s);
+        RecuperaTuVozApp.of(context).setTheme(s.temaOscuro);
+      },
+      onUserChanged: (u) async {
+        await _auth.saveUser(u);
+        if (mounted) setState(() => _user = u);
+      },
       onLogout: _logout,
     );
   }
 }
 
-// ── AppShell: navegación principal ────────────────────────────────
+// ─────────────────────────────────────────
+// APP SHELL (NAVEGACIÓN)
+// ─────────────────────────────────────────
+
 class AppShell extends StatefulWidget {
   final AppUser user;
   final AppSettings settings;
@@ -190,14 +210,12 @@ class _AppShellState extends State<AppShell> {
       return CloneVoiceScreen(
         token: widget.user.token,
         alreadyHasVoice: widget.user.hasVoice,
-        // Siempre viene del modelo persistido → nunca se pierde
         initialNumReferences: widget.user.numReferences,
         onUploadReplace: (files) async {
           final saved = await _voiceApi.uploadReplaceAudios(
             token: widget.user.token,
             files: files,
           );
-          // Guardamos el nuevo contador en el modelo
           widget.onUserChanged(
             widget.user.copyWith(hasVoice: true, numReferences: saved),
           );
@@ -243,21 +261,13 @@ class _AppShellState extends State<AppShell> {
         onTap: _goToTab,
         items: const [
           BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: 'Inicio'),
+              icon: Icon(Icons.home), label: 'Inicio'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.keyboard_outlined),
-              activeIcon: Icon(Icons.keyboard_rounded),
-              label: 'Texto'),
+              icon: Icon(Icons.keyboard), label: 'Texto'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view_outlined),
-              activeIcon: Icon(Icons.grid_view_rounded),
-              label: 'Frases'),
+              icon: Icon(Icons.grid_view), label: 'Frases'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
-              label: 'Perfil'),
+              icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
     );

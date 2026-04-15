@@ -76,7 +76,7 @@ class AppTheme {
       unselectedLabelStyle: TextStyle(fontSize: 11),
     ),
     cardColor: AppColors.surface,
-    dividerColor: Color(0x1AFFFFFF), // white10
+    dividerColor: const Color(0x1AFFFFFF), // white10
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: AppColors.surface,
       contentTextStyle: TextStyle(color: AppColors.textPrimary),
@@ -85,7 +85,7 @@ class AppTheme {
       style: OutlinedButton.styleFrom(
         side: const BorderSide(color: AppColors.teal, width: 1.8),
         foregroundColor: AppColors.teal,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
       ),
     ),
     switchTheme: SwitchThemeData(
@@ -94,7 +94,7 @@ class AppTheme {
       ),
       trackColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected)
-            ? Color(0x6600E5CC)
+            ? const Color(0x6600E5CC)
             : AppColors.border,
       ),
     ),
@@ -154,7 +154,7 @@ class AppTheme {
       style: OutlinedButton.styleFrom(
         side: const BorderSide(color: AppColors.tealLight, width: 1.8),
         foregroundColor: AppColors.tealLight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
       ),
     ),
     switchTheme: SwitchThemeData(
@@ -163,7 +163,7 @@ class AppTheme {
       ),
       trackColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected)
-            ? Color(0x6600B8A3)
+            ? const Color(0x6600B8A3)
             : AppColors.borderLight,
       ),
     ),
@@ -190,20 +190,7 @@ class AppTheme {
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME PROVIDER
 // ─────────────────────────────────────────────────────────────────────────────
-class ThemeProvider extends ChangeNotifier {
-  ThemeMode _mode = ThemeMode.dark;
 
-  ThemeMode get mode => _mode;
-  bool get isDark => _mode == ThemeMode.dark;
-
-  void toggle() {
-    _mode = isDark ? ThemeMode.light : ThemeMode.dark;
-    notifyListeners();
-  }
-
-  void setDark()  { _mode = ThemeMode.dark;   notifyListeners(); }
-  void setLight() { _mode = ThemeMode.light;  notifyListeners(); }
-}
 
 // ── Adaptive colors — use as: AppColors.of(context).bg etc. ──────
 class AdaptiveColors {
