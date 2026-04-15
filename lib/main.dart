@@ -82,7 +82,7 @@ class _AppRootState extends State<AppRoot> {
 
     AppUser? syncedUser = user;
 
-    if (user != null) {
+    if (user != null && user.token.isNotEmpty) {
       try {
         final status = await _voiceApi.checkVoiceStatusFull(user.token);
         syncedUser = user.copyWith(

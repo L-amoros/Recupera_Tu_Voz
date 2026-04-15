@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/app_user.dart';
 
 const String kServerUrl = 'https://mirian-eriophyllous-serriedly.ngrok-free.dev';
@@ -18,81 +19,108 @@ class ApiException implements Exception {
 // AUTH SERVICE
 // ─────────────────────────────────────────────────────────────────
 class AuthService {
-  static const _keyUser = 'saved_user';
+  static const _keyToken = 'auth_token';
+  static const _keyUser  = 'saved_user';
 
+  static const _secure = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
+  // ── REGISTER ───────────────────────────────────────────────────
   Future<AppUser> register({
     required String email,
     required String password,
     required String name,
   }) async {
-    final res = await http
-        .post(
+    final res = await http.post(
       Uri.parse('$kServerUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.trim(), 'password': password, 'name': name.trim()}),
-    )
-        .timeout(const Duration(seconds: 15));
+      body: jsonEncode({
+        'email': email.trim(),
+        'password': password,
+        'name': name.trim(),
+      }),
+    ).timeout(const Duration(seconds: 15));
+
     return _parseAuth(res);
   }
 
+  // ── LOGIN EMAIL ────────────────────────────────────────────────
   Future<AppUser> login({
     required String email,
     required String password,
   }) async {
-    final res = await http
-        .post(
+    final res = await http.post(
       Uri.parse('$kServerUrl/auth/login'),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: 'username=${Uri.encodeComponent(email.trim())}'
           '&password=${Uri.encodeComponent(password)}',
-    )
-        .timeout(const Duration(seconds: 15));
+    ).timeout(const Duration(seconds: 15));
     return _parseAuth(res);
   }
 
-  /// Envía el ID token de Google al backend y obtiene sesión.
+  // ── LOGIN GOOGLE ───────────────────────────────────────────────
   Future<AppUser> loginWithGoogle(String idToken) async {
-    final res = await http
-        .post(
+    final res = await http.post(
       Uri.parse('$kServerUrl/auth/google'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'id_token': idToken}),
-    )
-        .timeout(const Duration(seconds: 15));
+    ).timeout(const Duration(seconds: 15));
+
     return _parseAuth(res);
   }
 
+  // ── PERSISTENCIA SEGURA ────────────────────────────────────────
+  /// Guardamos token en secure storage + resto sin token en prefs
   Future<void> saveUser(AppUser user) async {
+    await _secure.write(key: _keyToken, value: user.token);
+    ///sin secure ya que no importa el resto de la info
     final p = await SharedPreferences.getInstance();
-    await p.setString(_keyUser, jsonEncode(user.toJson()));
+    await p.setString(_keyUser, jsonEncode(user.toJsonWithoutToken()));
   }
 
+  /// Cargamos usuario reconstruyendo token + datos
   Future<AppUser?> loadUser() async {
+    final token = await _secure.read(key: _keyToken);
+    if (token == null || token.isEmpty) return null;
+
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_keyUser);
     if (raw == null) return null;
+
     try {
-      return AppUser.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      map['token'] = token;
+      return AppUser.fromJson(map);
     } catch (_) {
       return null;
     }
   }
 
+  /// Logout limpio
   Future<void> logout() async {
+    await _secure.delete(key: _keyToken);
+
     final p = await SharedPreferences.getInstance();
     await p.remove(_keyUser);
   }
 
+  // ── INTERNO ────────────────────────────────────────────────────
   AppUser _parseAuth(http.Response res) {
     if (res.statusCode == 200 || res.statusCode == 201) {
-      return AppUser.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+      return AppUser.fromJson(
+        jsonDecode(res.body) as Map<String, dynamic>,
+      );
     }
-    throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+    throw ApiException(
+      _extractDetail(res),
+      statusCode: res.statusCode,
+    );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// VOICE API SERVICE  (sin cambios)
+// VOICE API SERVICE
 // ─────────────────────────────────────────────────────────────────
 class VoiceApiService {
   Map<String, String> _headers(String token) => {
@@ -105,10 +133,12 @@ class VoiceApiService {
       final res = await http
           .get(Uri.parse('$kServerUrl/voice/status'), headers: _headers(token))
           .timeout(const Duration(seconds: 10));
+
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }
     } catch (_) {}
+
     return {'has_voice': false, 'num_references': 0};
   }
 
@@ -122,14 +152,25 @@ class VoiceApiService {
     required List<({Uint8List bytes, String filename})> files,
   }) async {
     await deleteVoice(token);
-    final request = http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload-multiple'))
-      ..headers['Authorization'] = 'Bearer $token';
+
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$kServerUrl/voice/upload-multiple'),
+    )..headers['Authorization'] = 'Bearer $token';
+
     for (final f in files) {
-      request.files.add(http.MultipartFile.fromBytes('files', f.bytes, filename: f.filename));
+      request.files.add(
+        http.MultipartFile.fromBytes('files', f.bytes, filename: f.filename),
+      );
     }
+
     final streamed = await request.send().timeout(const Duration(seconds: 120));
     final res = await http.Response.fromStream(streamed);
-    if (res.statusCode != 200) throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+
+    if (res.statusCode != 200) {
+      throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+    }
+
     final d = jsonDecode(res.body) as Map<String, dynamic>;
     return d['num_references'] as int? ?? files.length;
   }
@@ -139,16 +180,28 @@ class VoiceApiService {
     required List<({Uint8List bytes, String filename})> files,
   }) async {
     int lastTotal = 0;
+
     for (final f in files) {
-      final request = http.MultipartRequest('POST', Uri.parse('$kServerUrl/voice/upload'))
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$kServerUrl/voice/upload'),
+      )
         ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename));
+        ..files.add(
+          http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename),
+        );
+
       final streamed = await request.send().timeout(const Duration(seconds: 60));
       final res = await http.Response.fromStream(streamed);
-      if (res.statusCode != 200) throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+
+      if (res.statusCode != 200) {
+        throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+      }
+
       final d = jsonDecode(res.body) as Map<String, dynamic>;
       lastTotal = d['num_references'] as int? ?? lastTotal + 1;
     }
+
     return lastTotal;
   }
 
@@ -164,7 +217,9 @@ class VoiceApiService {
       body: jsonEncode({'text': text, 'speed': speed}),
     )
         .timeout(const Duration(seconds: 90));
+
     if (res.statusCode == 200) return res.bodyBytes;
+
     throw ApiException(_extractDetail(res), statusCode: res.statusCode);
   }
 
@@ -172,10 +227,16 @@ class VoiceApiService {
     final res = await http
         .delete(Uri.parse('$kServerUrl/voice/'), headers: _headers(token))
         .timeout(const Duration(seconds: 10));
-    if (res.statusCode != 200) throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+
+    if (res.statusCode != 200) {
+      throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+    }
   }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────
 String _extractDetail(http.Response res) {
   try {
     final b = jsonDecode(res.body) as Map<String, dynamic>;

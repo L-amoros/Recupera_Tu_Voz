@@ -36,6 +36,15 @@ class AppUser {
     'has_voice': hasVoice,
     'num_references': numReferences,
   };
+  /// Serialización sin el token (para SharedPreferences).
+  Map<String, dynamic> toJsonWithoutToken() => {
+    'user_id': userId,
+    'name': name,
+    'email': email,
+    'picture': picture,
+    'has_voice': hasVoice,
+    'num_references': numReferences,
+  };
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
     token: j['token'] as String,
