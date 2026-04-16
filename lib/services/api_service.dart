@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:recupera_tu_voz/models/frase_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/app_user.dart';
@@ -234,6 +235,58 @@ class VoiceApiService {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// FRASES API SERVICE
+// ─────────────────────────────────────────────────────────────────
+class FrasesApiService {
+  static const _cacheKey     = 'frases_default_cache';
+  static const _cacheTimeKey = 'frases_default_cache_time';
+  static const _ttlHours     = 24; // caché válida 24 horas
+
+  /// Devuelve las frases del servidor, con caché local de 24 h.
+  /// Si no hay red, devuelve la caché aunque haya expirado.
+  Future<List<FraseItem>> fetchDefault() async {
+    final p = await SharedPreferences.getInstance();
+
+    // ¿Tenemos caché válida?
+    final savedAt = p.getInt(_cacheTimeKey) ?? 0;
+    final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+    final cacheValid = age < _ttlHours * 3600 * 1000;
+
+    if (cacheValid) {
+      final raw = p.getString(_cacheKey);
+      if (raw != null) return _parse(raw);
+    }
+
+    // Intentar red
+    try {
+      final res = await http
+          .get(Uri.parse('$kServerUrl/frases/default'))
+          .timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        // Guardar caché
+        await p.setString(_cacheKey, res.body);
+        await p.setInt(_cacheTimeKey, DateTime.now().millisecondsSinceEpoch);
+        return _parse(res.body);
+      }
+    } catch (_) {
+      // Sin red → caer al fallback
+    }
+
+    // Fallback: caché expirada o vacía → lista vacía (la pantalla la gestiona)
+    final stale = p.getString(_cacheKey);
+    if (stale != null) return _parse(stale);
+    return [];
+  }
+
+  List<FraseItem> _parse(String json) {
+    final list = jsonDecode(json) as List<dynamic>;
+    return list
+        .map((e) => FraseItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+}
 // ─────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────

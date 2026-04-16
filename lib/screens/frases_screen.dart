@@ -27,86 +27,145 @@ class _FrasesScreenState extends State<FrasesScreen> {
   final SettingsService _settingsSvc = SettingsService();
 
   String _categoriaActiva = 'Todas';
+
+  List<FraseItem> _frasesDefault = [];
   List<FraseItem> _frasesPersonales = [];
 
-  // Índice de la frase que está siendo procesada/reproducida ahora mismo
-  // null = ninguna activa
+  bool _loadingDefault = true;
+
   int? _activeIndex;
+  int? _sharingIndex;
 
   @override
   void initState() {
     super.initState();
+
     _tts = TtsService();
+
     _tts.onError = (msg) {
       if (mounted) {
         setState(() => _activeIndex = null);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(msg),
-          backgroundColor: c.warn.withValues(alpha: 0.9),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: c.warn.withValues(alpha: 0.9),
+          ),
+        );
       }
     };
+
     _tts.onDone = () {
       if (mounted) setState(() => _activeIndex = null);
     };
+
     _tts.init();
     _loadFrases();
   }
 
+  // 🔥 PRO: cache + backend + fallback + retry
   Future<void> _loadFrases() async {
-    final list = await _settingsSvc.loadFrasesPersonales();
-    if (mounted) setState(() => _frasesPersonales = list);
+    final api = FrasesApiService();
+
+    final cached = await _settingsSvc.loadCachedFrasesDefault();
+    final personales = await _settingsSvc.loadFrasesPersonales();
+
+    // 1️⃣ Mostrar cache primero
+    if (mounted && cached.isNotEmpty) {
+      setState(() {
+        _frasesDefault = cached;
+        _frasesPersonales = personales;
+        _loadingDefault = false;
+      });
+    }
+
+    // 2️⃣ Backend
+    try {
+      final defaults = await api.fetchDefault();
+
+      if (mounted) {
+        setState(() {
+          _frasesDefault = defaults.cast<FraseItem>();
+          _frasesPersonales = personales;
+          _loadingDefault = false;
+        });
+      }
+
+      await _settingsSvc.saveCachedFrasesDefault(defaults.cast<FraseItem>());
+
+    } catch (_) {
+      // 3️⃣ fallback solo si no había cache
+      if (mounted && cached.isEmpty) {
+        setState(() => _loadingDefault = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Error cargando frases. Modo offline'),
+            action: SnackBarAction(
+              label: 'Reintentar',
+              onPressed: _loadFrases,
+            ),
+          ),
+        );
+      }
+    }
   }
 
-  // Índice de la frase que está siendo preparada para compartir
-  int? _sharingIndex;
+  List<FraseItem> get _frasesVisibles {
+    final todas = [..._frasesDefault, ..._frasesPersonales];
+
+    if (_categoriaActiva == 'Todas') return todas;
+    if (_categoriaActiva == 'Mis frases') return _frasesPersonales;
+
+    return todas.where((f) => f.categoria == _categoriaActiva).toList();
+  }
 
   Future<void> _compartirAudio(int index, String texto) async {
-    // Solo si hay voz clonada disponible
     if (widget.user?.token == null || !(widget.user?.hasVoice ?? false)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Necesitas tener una voz clonada para compartir audio'),
-        backgroundColor: Colors.orange,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Necesitas tener una voz clonada'),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
-    if (_sharingIndex != null) return; // ya hay una compartición en curso
+    if (_sharingIndex != null) return;
 
     setState(() => _sharingIndex = index);
 
     try {
       final api = VoiceApiService();
+
       final bytes = await api.synthesize(
-        token: widget.user!.token!,
+        token: widget.user!.token,
         text: texto,
         speed: (widget.settings.velocidad + 0.5).clamp(0.5, 2.0),
       );
 
-      // Guardar en archivo temporal
       final dir = await getTemporaryDirectory();
-      final _cleaned = texto
+
+      final safeNombre = texto
           .replaceAll(RegExp(r'[^\w\s]'), '')
           .trim()
-          .replaceAll(' ', '_');
-      final safeNombre = _cleaned.substring(0, _cleaned.length.clamp(0, 30));
+          .replaceAll(' ', '_')
+          .substring(0, texto.length.clamp(0, 30));
+
       final file = File('${dir.path}/voz_$safeNombre.mp3');
+
       await file.writeAsBytes(bytes);
 
       if (!mounted) return;
 
-      // Compartir con sheet nativo (permite elegir WhatsApp u otras apps)
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'audio/mpeg')],
         text: texto,
-        subject: 'Audio generado por mi voz',
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error al generar audio: $e'),
-          backgroundColor: c.warn.withValues(alpha: 0.9),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
       }
     } finally {
       if (mounted) setState(() => _sharingIndex = null);
@@ -114,7 +173,6 @@ class _FrasesScreenState extends State<FrasesScreen> {
   }
 
   Future<void> _hablar(int index, String texto) async {
-    // Si ya hay algo activo, ignorar el tap (el TtsService también lo bloquea)
     if (_activeIndex != null) return;
 
     setState(() => _activeIndex = index);
@@ -126,130 +184,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
       hasVoice: widget.user?.hasVoice ?? false,
     );
 
-    // Si speak devolvió false (bloqueado internamente), limpiamos igualmente
     if (!ok && mounted) setState(() => _activeIndex = null);
-  }
-
-  List<FraseItem> get _frasesVisibles {
-    final todas = [...frasesDefault, ..._frasesPersonales];
-    if (_categoriaActiva == 'Todas') return todas;
-    if (_categoriaActiva == 'Mis frases') return _frasesPersonales;
-    return todas.where((f) => f.categoria == _categoriaActiva).toList();
-  }
-
-  void _mostrarDialogoAdd() {
-    final controller = TextEditingController();
-    String catSel = 'Mis frases';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: c.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 38, height: 4,
-                  decoration: BoxDecoration(
-                    color: c.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text('Nueva frase',
-                  style: TextStyle(
-                      color: c.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700)),
-              const SizedBox(height: 14),
-              AccentTextField(
-                controller: controller,
-                hint: 'Escribe la frase...',
-                maxLines: 3,
-              ),
-              const SizedBox(height: 14),
-              const SectionLabel('Categoría',
-                  padding: EdgeInsets.only(bottom: 10)),
-              ChipRow(
-                options: const [
-                  'Mis frases', 'Saludos', 'Necesidades', 'Respuestas', 'Urgente'
-                ],
-                selected: catSel,
-                onSelect: (c) => setModal(() => catSel = c),
-                colorOf: AppColors.catColor,
-              ),
-              const SizedBox(height: 18),
-              PrimaryButton(
-                label: 'Guardar frase',
-                onTap: () {
-                  final texto = controller.text.trim();
-                  if (texto.isEmpty) return;
-                  final nueva = FraseItem(
-                      texto: texto, categoria: catSel, esPersonal: true);
-                  final updated = [..._frasesPersonales, nueva];
-                  setState(() => _frasesPersonales = updated);
-                  _settingsSvc.saveFrasesPersonales(updated);
-                  Navigator.pop(ctx);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _confirmarEliminar(FraseItem frase) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: c.surface,
-        title: Text('Eliminar frase',
-            style: TextStyle(color: c.textPrimary)),
-        content: Text(
-          '"${frase.texto}"',
-          style: TextStyle(color: c.textMid),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar',
-                style: TextStyle(color: c.textDim)),
-          ),
-          TextButton(
-            onPressed: () {
-              final updated =
-              _frasesPersonales.where((f) => f != frase).toList();
-              setState(() => _frasesPersonales = updated);
-              _settingsSvc.saveFrasesPersonales(updated);
-              Navigator.pop(context);
-            },
-            child:
-            Text('Eliminar', style: TextStyle(color: c.warn)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _tts.dispose();
-    super.dispose();
   }
 
   @override
@@ -258,48 +193,7 @@ class _FrasesScreenState extends State<FrasesScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: AppBar(
-        title: const Text('Frases rápidas'),
-        actions: [
-          // Indicador global de que hay síntesis en curso
-          if (_activeIndex != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 14, height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: c.accent.withValues(alpha: 0.8),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sintetizando...',
-                        style: TextStyle(
-                            color: c.accent.withValues(alpha: 0.8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600),
-                      ),
-                      if (widget.user?.hasVoice ?? false)
-                        Text(
-                          'puede tardar hasta 60s',
-                          style: TextStyle(
-                              color: c.textDim,
-                              fontSize: 10),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Frases rápidas')),
       body: Column(
         children: [
           Padding(
@@ -311,9 +205,13 @@ class _FrasesScreenState extends State<FrasesScreen> {
               colorOf: AppColors.catColor,
             ),
           ),
+
           Divider(color: c.border, height: 1),
+
           Expanded(
-            child: frases.isEmpty
+            child: _loadingDefault
+                ? const Center(child: CircularProgressIndicator())
+                : frases.isEmpty
                 ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

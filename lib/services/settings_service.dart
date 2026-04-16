@@ -38,4 +38,31 @@ class SettingsService {
       frases.map((f) => f.toJsonString()).toList(),
     );
   }
+  static const _keyFrasesDefaultCache     = 'frases_default_cache';
+  static const _keyFrasesDefaultCacheTime = 'frases_default_cache_time';
+  static const _ttlHours = 24;
+
+  Future<List<FraseItem>> loadCachedFrasesDefault() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final savedAt = prefs.getInt(_keyFrasesDefaultCacheTime) ?? 0;
+    final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+    final expired = age > _ttlHours * 3600 * 1000;
+    final raw = prefs.getStringList(_keyFrasesDefaultCache) ?? [];
+    if (raw.isEmpty) return [];
+    if (expired) return []; // forzar fetch si expiró
+    return raw.map((s) => FraseItem.fromJsonString(s)).toList();
+  }
+
+  Future<void> saveCachedFrasesDefault(List<FraseItem> frases) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _keyFrasesDefaultCache,
+      frases.map((f) => f.toJsonString()).toList(),
+    );
+    await prefs.setInt(
+      _keyFrasesDefaultCacheTime,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+  }
 }
