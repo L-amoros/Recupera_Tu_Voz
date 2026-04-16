@@ -62,14 +62,12 @@ class _FrasesScreenState extends State<FrasesScreen> {
     _loadFrases();
   }
 
-  // 🔥 PRO: cache + backend + fallback + retry
   Future<void> _loadFrases() async {
     final api = FrasesApiService();
 
     final cached = await _settingsSvc.loadCachedFrasesDefault();
     final personales = await _settingsSvc.loadFrasesPersonales();
 
-    // 1️⃣ Mostrar cache primero
     if (mounted && cached.isNotEmpty) {
       setState(() {
         _frasesDefault = cached;
@@ -78,7 +76,6 @@ class _FrasesScreenState extends State<FrasesScreen> {
       });
     }
 
-    // 2️⃣ Backend
     try {
       final defaults = await api.fetchDefault();
 
@@ -93,7 +90,6 @@ class _FrasesScreenState extends State<FrasesScreen> {
       await _settingsSvc.saveCachedFrasesDefault(defaults.cast<FraseItem>());
 
     } catch (_) {
-      // 3️⃣ fallback solo si no había cache
       if (mounted && cached.isEmpty) {
         setState(() => _loadingDefault = false);
 
@@ -187,6 +183,109 @@ class _FrasesScreenState extends State<FrasesScreen> {
     if (!ok && mounted) setState(() => _activeIndex = null);
   }
 
+  void _mostrarDialogoAdd() {
+    final controller = TextEditingController();
+    String catSel = 'Mis frases';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: c.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38, height: 4,
+                  decoration: BoxDecoration(
+                    color: c.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text('Nueva frase',
+                  style: TextStyle(
+                      color: c.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              AccentTextField(
+                controller: controller,
+                hint: 'Escribe la frase...',
+                maxLines: 3,
+              ),
+              const SizedBox(height: 14),
+              const SectionLabel('Categoría',
+                  padding: EdgeInsets.only(bottom: 10)),
+              ChipRow(
+                options: const [
+                  'Mis frases', 'Saludos', 'Necesidades', 'Respuestas', 'Urgente'
+                ],
+                selected: catSel,
+                onSelect: (c) => setModal(() => catSel = c),
+                colorOf: AppColors.catColor,
+              ),
+              const SizedBox(height: 18),
+              PrimaryButton(
+                label: 'Guardar frase',
+                onTap: () {
+                  final texto = controller.text.trim();
+                  if (texto.isEmpty) return;
+                  final nueva = FraseItem(
+                      texto: texto, categoria: catSel, esPersonal: true);
+                  final updated = [..._frasesPersonales, nueva];
+                  setState(() => _frasesPersonales = updated);
+                  _settingsSvc.saveFrasesPersonales(updated);
+                  Navigator.pop(ctx);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmarEliminar(FraseItem frase) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: c.surface,
+        title: Text('Eliminar frase', style: TextStyle(color: c.textPrimary)),
+        content: Text('"${frase.texto}"', style: TextStyle(color: c.textMid)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar', style: TextStyle(color: c.textDim)),
+          ),
+          TextButton(
+            onPressed: () {
+              final updated =
+              _frasesPersonales.where((f) => f != frase).toList();
+              setState(() => _frasesPersonales = updated);
+              _settingsSvc.saveFrasesPersonales(updated);
+              Navigator.pop(context);
+            },
+            child: Text('Eliminar', style: TextStyle(color: c.warn)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final frases = _frasesVisibles;
@@ -272,12 +371,12 @@ class _FrasesScreenState extends State<FrasesScreen> {
 // ── Frase tile ────────────────────────────────────────────────────
 class _FraseTile extends StatefulWidget {
   final FraseItem frase;
-  final bool isActive; // esta tile está siendo sintetizada/reproducida
-  final bool isBusy;  // otra tile está activa (esta queda bloqueada)
-  final bool isSharing; // generando audio para compartir
+  final bool isActive;
+  final bool isBusy;
+  final bool isSharing;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-  final VoidCallback? onShare; // null = sin voz clonada
+  final VoidCallback? onShare;
 
   const _FraseTile({
     required this.frase,
@@ -296,7 +395,6 @@ class _FraseTile extends StatefulWidget {
 class _FraseTileState extends State<_FraseTile>
     with SingleTickerProviderStateMixin {
   AdaptiveColors get c => AdaptiveColors.of(context);
-
 
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
@@ -324,7 +422,6 @@ class _FraseTileState extends State<_FraseTile>
 
   @override
   Widget build(BuildContext context) {
-    // Opacidad reducida si otra tile está activa
     final opacity = widget.isBusy ? 0.4 : 1.0;
 
     return AnimatedOpacity(
@@ -346,19 +443,18 @@ class _FraseTileState extends State<_FraseTile>
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               color: widget.isActive
-                  ? _accent.withValues(alpha: 0.15)  // fondo iluminado cuando activa
+                  ? _accent.withValues(alpha: 0.15)
                   : c.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: widget.isActive
-                    ? _accent.withValues(alpha: 0.8)  // borde más vivo cuando activa
+                    ? _accent.withValues(alpha: 0.8)
                     : _accent.withValues(alpha: 0.3),
                 width: widget.isActive ? 1.5 : 1,
               ),
             ),
             child: Stack(
               children: [
-                // Left accent bar
                 Positioned(
                   left: 0, top: 8, bottom: 8,
                   child: Container(
@@ -369,7 +465,6 @@ class _FraseTileState extends State<_FraseTile>
                     ),
                   ),
                 ),
-                // ── Icono compartir (avión) — esquina superior izquierda ──
                 if (widget.onShare != null)
                   Positioned(
                     top: 5, left: 7,
@@ -396,7 +491,6 @@ class _FraseTileState extends State<_FraseTile>
                       ),
                     ),
                   ),
-                // Spinner cuando esta tile es la activa
                 if (widget.isActive)
                   Positioned(
                     top: 8, right: 8,
@@ -408,14 +502,12 @@ class _FraseTileState extends State<_FraseTile>
                       ),
                     ),
                   )
-                // Estrella personal (solo si no está activa)
                 else if (widget.frase.esPersonal)
                   Positioned(
                     top: 8, right: 8,
                     child: Icon(Icons.star_rounded,
                         size: 12, color: _accent.withValues(alpha: 0.6)),
                   ),
-                // Text
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
                   child: Center(
@@ -425,9 +517,7 @@ class _FraseTileState extends State<_FraseTile>
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: widget.isActive
-                            ? c.textPrimary
-                            : c.textPrimary,
+                        color: c.textPrimary,
                         fontSize: 13,
                         height: 1.4,
                       ),
