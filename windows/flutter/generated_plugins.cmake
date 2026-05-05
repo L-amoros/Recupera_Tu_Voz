@@ -5,6 +5,8 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   flutter_secure_storage_windows
   flutter_tts
+  permission_handler_windows
+  record_windows
   share_plus
   url_launcher_windows
 )

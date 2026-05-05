@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'record_voice_screen.dart';
 
 class CloneVoiceScreen extends StatefulWidget {
   final String token;
@@ -42,6 +43,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
   late bool _hasVoice;
   late int _numRefs;
   bool _uploading = false;
+  bool _showRecorder = false;
   String? _error;
   String? _success;
 
@@ -77,8 +79,6 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
     setState(() { _uploading = true; _error = null; _success = null; });
 
     try {
-      // ✅ CLAVE: replace → endpoint que borra y reemplaza
-      //          add     → endpoint acumulativo que NO borra
       final total = replace
           ? await widget.onUploadReplace(filesData)
           : await widget.onUploadAdd(filesData);
@@ -102,19 +102,16 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: c.surface,
-        title: Text('Eliminar voz',
-            style: TextStyle(color: c.textPrimary)),
+        title: Text('Eliminar voz', style: TextStyle(color: c.textPrimary)),
         content: Text('¿Seguro que quieres eliminar tu voz clonada?',
             style: TextStyle(color: c.textMid)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancelar',
-                  style: TextStyle(color: c.textDim))),
+              child: Text('Cancelar', style: TextStyle(color: c.textDim))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text('Eliminar',
-                  style: TextStyle(color: c.warn))),
+              child: Text('Eliminar', style: TextStyle(color: c.warn))),
         ],
       ),
     );
@@ -129,6 +126,29 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ── Pantalla de grabación integrada ────────────────────────────
+    if (_showRecorder) {
+      return RecordVoiceScreen(
+        currentRefs: _numRefs,
+        maxRefs: _maxRefs,
+        onDone: () => setState(() => _showRecorder = false),
+        onRecorded: (files, {required bool replace}) async {
+          final total = replace
+              ? await widget.onUploadReplace(files)
+              : await widget.onUploadAdd(files);
+          setState(() {
+            _hasVoice = true;
+            _numRefs = total;
+            _showRecorder = false;
+            _success =
+            '✅ $_numRefs/$_maxRefs audio${_numRefs == 1 ? '' : 's'} guardado${_numRefs == 1 ? '' : 's'}.'
+                '${_numRefs < _maxRefs ? ' Puedes añadir más para mejorar la clonación.' : ' ¡Calidad máxima!'}';
+          });
+        },
+      );
+    }
+
+    // ── Vista normal ───────────────────────────────────────────────
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
@@ -148,12 +168,10 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: (_hasVoice ? c.teal : c.accent)
-                    .withValues(alpha: 0.08),
+                color: (_hasVoice ? c.teal : c.accent).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: (_hasVoice ? c.teal : c.accent)
-                      .withValues(alpha: 0.3),
+                  color: (_hasVoice ? c.teal : c.accent).withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -208,7 +226,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                           ),
                         ] else
                           Text(
-                            'Sube hasta 3 audios para empezar.',
+                            'Graba o sube hasta 3 audios para empezar.',
                             style: TextStyle(color: c.textDim, fontSize: 12),
                           ),
                       ],
@@ -226,10 +244,10 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
             Text(
-              '• Sube hasta 3 audios tuyos hablando con claridad\n'
+              '• Graba desde la app o sube un fichero de audio\n'
                   '• Duración ideal por audio: 30 seg — 2 min\n'
                   '• Sin música ni ruido de fondo\n'
-                  '• Formatos: WAV, MP3, M4A, OGG (máx. 20MB c/u)',
+                  '• Formatos al subir: WAV, MP3, M4A, OGG (máx. 20MB c/u)',
               style: TextStyle(color: c.textMid, fontSize: 13, height: 1.8),
             ),
             const SizedBox(height: 28),
@@ -237,25 +255,39 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
-                child: Text(_error!,
-                    style: TextStyle(color: c.warn, fontSize: 13)),
+                child: Text(_error!, style: TextStyle(color: c.warn, fontSize: 13)),
               ),
             if (_success != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
-                child: Text(_success!,
-                    style: TextStyle(color: c.teal, fontSize: 13)),
+                child: Text(_success!, style: TextStyle(color: c.teal, fontSize: 13)),
               ),
 
-            // ── Botón principal ──────────────────────────────────
+            // ── Grabar desde la app (NUEVO) ──────────────────────
+            _BigButton(
+              label: 'Grabar mi voz ahora',
+              icon: Icons.mic_rounded,
+              color: c.teal,
+              loading: false,
+              onTap: () => setState(() {
+                _showRecorder = true;
+                _error = null;
+                _success = null;
+              }),
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── Subir fichero ────────────────────────────────────
             _BigButton(
               label: _hasVoice
-                  ? 'Reemplazar todo (subir nuevos)'
-                  : 'Seleccionar audios y clonar',
+                  ? 'Reemplazar todo (subir fichero)'
+                  : 'Seleccionar fichero de audio',
               icon: Icons.upload_file_rounded,
               color: c.accent,
               loading: _uploading,
-              onTap: () => _pickAndUpload(replace: true),  // ← borra y reemplaza
+              onTap: () => _pickAndUpload(replace: true),
+              outline: _hasVoice,
             ),
 
             // ── Añadir más (solo si hay hueco) ───────────────────
@@ -265,9 +297,9 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                 label: 'Añadir más audios '
                     '(${_maxRefs - _numRefs} libre${_maxRefs - _numRefs == 1 ? '' : 's'})',
                 icon: Icons.add_circle_outline_rounded,
-                color: c.teal,
+                color: c.accent,
                 loading: _uploading,
-                onTap: () => _pickAndUpload(replace: false),  // ← acumula sin borrar
+                onTap: () => _pickAndUpload(replace: false),
                 outline: true,
               ),
             ],

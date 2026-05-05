@@ -4,6 +4,7 @@ import 'models/app_user.dart';
 import 'screens/clone_voice_screen.dart';
 import 'screens/frases_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/lip_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/register_screen.dart';
@@ -108,7 +109,6 @@ class _AppRootState extends State<AppRoot> {
     if (mounted) setState(() => _user = user);
   }
 
-  // 🔥 LOGIN GOOGLE
   Future<void> _loginWithGoogle(String idToken) async {
     final user = await _auth.loginWithGoogle(idToken);
     await _auth.saveUser(user);
@@ -241,10 +241,12 @@ class _AppShellState extends State<AppShell> {
       );
     }
 
+    // ── Las 5 pantallas de navegación ──────────────────────────
     final screens = [
       HomeScreen(onEmpezar: () => _goToTab(1)),
       TextScreen(settings: widget.settings, user: widget.user),
       FrasesScreen(settings: widget.settings, user: widget.user),
+      LipScreen(user: widget.user),                              // ← NUEVO
       ProfileScreen(
         settings: widget.settings,
         user: widget.user,
@@ -261,13 +263,25 @@ class _AppShellState extends State<AppShell> {
         onTap: _goToTab,
         items: const [
           BottomNavigationBarItem(
-              icon: Icon(Icons.home), label: 'Inicio'),
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Inicio'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.keyboard), label: 'Texto'),
+              icon: Icon(Icons.keyboard_outlined),
+              activeIcon: Icon(Icons.keyboard),
+              label: 'Texto'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view), label: 'Frases'),
+              icon: Icon(Icons.grid_view_outlined),
+              activeIcon: Icon(Icons.grid_view),
+              label: 'Frases'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.person), label: 'Perfil'),
+              icon: Icon(Icons.face_outlined),              // ← NUEVO
+              activeIcon: Icon(Icons.face),
+              label: 'Labios'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Perfil'),
         ],
       ),
     );
