@@ -12,6 +12,8 @@ import 'screens/text_screen.dart';
 import 'services/api_service.dart';
 import 'services/settings_service.dart';
 import 'theme/app_theme.dart';
+import 'screens/app_router.dart';
+import 'screens/trabajo_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -156,7 +158,7 @@ class _AppRootState extends State<AppRoot> {
       );
     }
 
-    return AppShell(
+    return AppRouter(
       user: _user!,
       settings: _settings,
       onSettingsChanged: (s) {
@@ -246,6 +248,7 @@ class _AppShellState extends State<AppShell> {
       HomeScreen(onEmpezar: () => _goToTab(1)),
       TextScreen(settings: widget.settings, user: widget.user),
       FrasesScreen(settings: widget.settings, user: widget.user),
+      TrabajoScreen(user: widget.user),
       LipScreen(user: widget.user),                              // ← NUEVO
       ProfileScreen(
         settings: widget.settings,
@@ -275,7 +278,11 @@ class _AppShellState extends State<AppShell> {
               activeIcon: Icon(Icons.grid_view),
               label: 'Frases'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.face_outlined),              // ← NUEVO
+              icon: Icon(Icons.assignment_outlined),
+              activeIcon: Icon(Icons.assignment_rounded),
+              label: 'Trabajo'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.face_outlined),
               activeIcon: Icon(Icons.face),
               label: 'Labios'),
           BottomNavigationBarItem(

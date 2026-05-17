@@ -1,11 +1,15 @@
 class AppUser {
-  final String token;
-  final String userId;
-  final String name;
-  final String email;
+  final String  token;
+  final String  userId;
+  final String  name;
+  final String  email;
   final String? picture;
-  final bool hasVoice;
-  final int numReferences;
+  final bool    hasVoice;
+  final int     numReferences;
+  final String? role;          // "patient" | "logopeda" | null
+  final bool    roleSet;       // false = primer login → mostrar RoleSelectionScreen
+  final String? logopedaId;
+  final String? logopedaName;
 
   const AppUser({
     required this.token,
@@ -15,44 +19,79 @@ class AppUser {
     this.picture,
     required this.hasVoice,
     this.numReferences = 0,
+    this.role,
+    this.roleSet = false,
+    this.logopedaId,
+    this.logopedaName,
   });
 
-  AppUser copyWith({bool? hasVoice, String? name, int? numReferences}) => AppUser(
-    token: token,
-    userId: userId,
-    name: name ?? this.name,
-    email: email,
-    picture: picture,
-    hasVoice: hasVoice ?? this.hasVoice,
-    numReferences: numReferences ?? this.numReferences,
+  bool get isLogopeda => role == 'logopeda';
+  bool get isPatient  => role == 'patient';
+
+  // ── Serialización ──────────────────────────────────────────────
+
+  factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
+    token:         j['token']          as String,
+    userId:        j['user_id']        as String,
+    name:          j['name']           as String? ?? '',
+    email:         j['email']          as String,
+    picture:       j['picture']        as String?,
+    hasVoice:      j['has_voice']      as bool?   ?? false,
+    numReferences: j['num_references'] as int?    ?? 0,
+    role:          j['role']           as String?,
+    roleSet:       j['role_set']       as bool?   ?? false,
+    logopedaId:    j['logopeda_id']    as String?,
+    logopedaName:  j['logopeda_name']  as String?,
   );
 
   Map<String, dynamic> toJson() => {
-    'token': token,
-    'user_id': userId,
-    'name': name,
-    'email': email,
-    'picture': picture,
-    'has_voice': hasVoice,
+    'token':          token,
+    'user_id':        userId,
+    'name':           name,
+    'email':          email,
+    'picture':        picture,
+    'has_voice':      hasVoice,
     'num_references': numReferences,
-  };
-  /// Serialización sin el token (para SharedPreferences).
-  Map<String, dynamic> toJsonWithoutToken() => {
-    'user_id': userId,
-    'name': name,
-    'email': email,
-    'picture': picture,
-    'has_voice': hasVoice,
-    'num_references': numReferences,
+    'role':           role,
+    'role_set':       roleSet,
+    'logopeda_id':    logopedaId,
+    'logopeda_name':  logopedaName,
   };
 
-  factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
-    token: j['token'] as String,
-    userId: j['user_id'] as String,
-    name: j['name'] as String? ?? '',
-    email: j['email'] as String,
-    picture: j['picture'] as String?,
-    hasVoice: j['has_voice'] as bool? ?? false,
-    numReferences: j['num_references'] as int? ?? 0,
+  Map<String, dynamic> toJsonWithoutToken() => {
+    'user_id':        userId,
+    'name':           name,
+    'email':          email,
+    'picture':        picture,
+    'has_voice':      hasVoice,
+    'num_references': numReferences,
+    'role':           role,
+    'role_set':       roleSet,
+    'logopeda_id':    logopedaId,
+    'logopeda_name':  logopedaName,
+  };
+
+  // ── copyWith ───────────────────────────────────────────────────
+
+  AppUser copyWith({
+    bool?   hasVoice,
+    String? name,
+    int?    numReferences,
+    String? role,
+    bool?   roleSet,
+    String? logopedaId,
+    String? logopedaName,
+  }) => AppUser(
+    token:         token,
+    userId:        userId,
+    name:          name          ?? this.name,
+    email:         email,
+    picture:       picture,
+    hasVoice:      hasVoice      ?? this.hasVoice,
+    numReferences: numReferences ?? this.numReferences,
+    role:          role          ?? this.role,
+    roleSet:       roleSet       ?? this.roleSet,
+    logopedaId:    logopedaId   ?? this.logopedaId,
+    logopedaName:  logopedaName ?? this.logopedaName,
   );
 }
