@@ -94,7 +94,7 @@ class _TextScreenState extends State<TextScreen> {
     try {
       final api = VoiceApiService();
       final bytes = await api.synthesize(
-        token: widget.user!.token!,
+        token: widget.user!.token,
         text: text,
         speed: (_velocidad + 0.5).clamp(0.5, 2.0),
       );
@@ -104,12 +104,14 @@ class _TextScreenState extends State<TextScreen> {
           .trim()
           .replaceAll(' ', '_');
       final safeNombre = _cleaned.substring(0, _cleaned.length.clamp(0, 30));
-      final file = File('${dir.path}/voz_$safeNombre.mp3');
+
+      // WAV — el backend ya no devuelve MP3
+      final file = File('${dir.path}/voz_$safeNombre.wav');
       await file.writeAsBytes(bytes);
 
       if (!mounted) return;
       await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'audio/mpeg')],
+        [XFile(file.path, mimeType: 'audio/wav')],
         text: text,
         subject: 'Audio generado por mi voz',
       );
@@ -247,7 +249,6 @@ class _TextScreenState extends State<TextScreen> {
   }
 }
 
-// ── Controls toggle ──────────────────────────────────────────────
 class _ControlsToggle extends StatelessWidget {
   final bool open;
   final VozEmocion emocion;
@@ -369,7 +370,6 @@ class _SliderRow extends StatelessWidget {
   }
 }
 
-// ── Share audio button ───────────────────────────────────────────
 class _ShareAudioButton extends StatelessWidget {
   final bool isSharing;
   final VoidCallback onTap;
@@ -415,6 +415,7 @@ class _ShareAudioButton extends StatelessWidget {
     );
   }
 }
+
 class _VoiceEngineBadge extends StatelessWidget {
   final bool usingClonedVoice;
   const _VoiceEngineBadge({required this.usingClonedVoice});

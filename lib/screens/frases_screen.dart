@@ -141,11 +141,11 @@ class _FrasesScreenState extends State<FrasesScreen> {
 
       final dir = await getTemporaryDirectory();
 
-      final safeNombre = texto
+      final safeNombreRaw = texto
           .replaceAll(RegExp(r'[^\w\s]'), '')
           .trim()
-          .replaceAll(' ', '_')
-          .substring(0, texto.length.clamp(0, 30));
+          .replaceAll(' ', '_');
+      final safeNombre = safeNombreRaw.substring(0, safeNombreRaw.length.clamp(0, 30));
 
       final file = File('${dir.path}/voz_$safeNombre.mp3');
 

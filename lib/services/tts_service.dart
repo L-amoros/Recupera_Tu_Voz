@@ -10,8 +10,6 @@ class TtsService {
   final AudioPlayer _player = AudioPlayer();
   final FlutterTts _systemTts = FlutterTts();
 
-  // true desde que se llama a speak() hasta que termina de reproducir
-  // (incluye el tiempo de red de síntesis)
   bool _isSpeaking = false;
   bool get isSpeaking => _isSpeaking;
 
@@ -109,11 +107,15 @@ class _BytesSource extends StreamAudioSource {
   _BytesSource(this._b);
   @override
   Future<StreamAudioResponse> request([int? start, int? end]) async {
-    start ??= 0; end ??= _b.length;
+    start ??= 0;
+    end ??= _b.length;
+    // El backend ahora devuelve WAV — cambiamos el contentType
     return StreamAudioResponse(
-      sourceLength: _b.length, contentLength: end - start, offset: start,
+      sourceLength: _b.length,
+      contentLength: end - start,
+      offset: start,
       stream: Stream.value(List<int>.from(_b.sublist(start, end))),
-      contentType: 'audio/mpeg',
+      contentType: 'audio/wav',
     );
   }
 }
