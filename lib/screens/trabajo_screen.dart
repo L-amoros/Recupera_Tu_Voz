@@ -1,11 +1,4 @@
-// lib/screens/trabajo_screen.dart
-//
-// Pestaña "Trabajo" del paciente: fichas asignadas por el logopeda.
-// Al pulsar "Practicar" abre una sesión real de ejercicios word-by-word
-// usando el router /exercises, y al terminar marca la ficha como completada.
-
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:record/record.dart';
@@ -37,21 +30,12 @@ class _TrabajoScreenState extends State<TrabajoScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() { _loading = true; _error = null; });
     try {
       final data = await RolesService(widget.user.token).getMisFichas();
-      if (mounted) setState(() {
-        _fichas = data;
-        _loading = false;
-      });
+      if (mounted) setState(() { _fichas = data; _loading = false; });
     } catch (e) {
-      if (mounted) setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
@@ -62,11 +46,7 @@ class _TrabajoScreenState extends State<TrabajoScreen> {
       appBar: AppBar(
         title: const Text('Mi trabajo'),
         actions: [
-          IconButton(
-            tooltip: 'Actualizar',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _load,
-          ),
+          IconButton(tooltip: 'Actualizar', icon: const Icon(Icons.refresh_rounded), onPressed: _load),
         ],
       ),
       body: _buildBody(),
@@ -77,52 +57,34 @@ class _TrabajoScreenState extends State<TrabajoScreen> {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.wifi_off_rounded, size: 48, color: c.textDim),
-              const SizedBox(height: 12),
-              Text('Error al cargar',
-                  style: TextStyle(color: c.textPrimary, fontSize: 16)),
-              const SizedBox(height: 6),
-              Text(_error!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: c.textDim, fontSize: 12)),
-              const SizedBox(height: 16),
-              OutlinedButton(onPressed: _load, child: const Text('Reintentar')),
-            ],
-          ),
-        ),
-      );
+      return Center(child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.wifi_off_rounded, size: 48, color: c.textDim),
+          const SizedBox(height: 12),
+          Text('Error al cargar', style: TextStyle(color: c.textPrimary, fontSize: 16)),
+          const SizedBox(height: 6),
+          Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: c.textDim, fontSize: 12)),
+          const SizedBox(height: 16),
+          OutlinedButton(onPressed: _load, child: const Text('Reintentar')),
+        ]),
+      ));
     }
 
     if (_fichas.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.assignment_outlined, size: 64, color: c.textDim),
-              const SizedBox(height: 16),
-              Text('Sin fichas asignadas',
-                  style: TextStyle(
-                      color: c.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Text(
-                'Tu logopeda todavía no te ha asignado ninguna ficha de trabajo.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: c.textDim, fontSize: 14, height: 1.5),
-              ),
-            ],
-          ),
-        ),
-      );
+      return Center(child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.assignment_outlined, size: 64, color: c.textDim),
+          const SizedBox(height: 16),
+          Text('Sin fichas asignadas',
+              style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Text('Tu logopeda todavía no te ha asignado ninguna ficha de trabajo.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.textDim, fontSize: 14, height: 1.5)),
+        ]),
+      ));
     }
 
     final pendientes = _fichas.where((f) => !f.completada).toList();
@@ -137,17 +99,13 @@ class _TrabajoScreenState extends State<TrabajoScreen> {
           if (pendientes.isNotEmpty) ...[
             _SectionHeader('Pendientes (${pendientes.length})', c),
             const SizedBox(height: 8),
-            ...pendientes.map((f) => _FichaTile(
-                ficha: f,
-                onTap: () => _abrirFicha(f))),
+            ...pendientes.map((f) => _FichaTile(ficha: f, onTap: () => _abrirFicha(f))),
             const SizedBox(height: 20),
           ],
           if (completadas.isNotEmpty) ...[
             _SectionHeader('Completadas (${completadas.length})', c),
             const SizedBox(height: 8),
-            ...completadas.map((f) => _FichaTile(
-                ficha: f,
-                onTap: () => _abrirFicha(f))),
+            ...completadas.map((f) => _FichaTile(ficha: f, onTap: () => _abrirFicha(f))),
           ],
         ],
       ),
@@ -156,14 +114,8 @@ class _TrabajoScreenState extends State<TrabajoScreen> {
 
   void _abrirFicha(FichaAsignada ficha) async {
     final updated = await Navigator.of(context).push<FichaAsignada>(
-      MaterialPageRoute(
-        builder: (_) => _FichaDetalleScreen(
-          ficha: ficha,
-          token: widget.user.token,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => _FichaDetalleScreen(ficha: ficha, token: widget.user.token)),
     );
-    // Si el paciente completó la ficha, actualizar la lista local
     if (updated != null && mounted) {
       setState(() {
         final idx = _fichas.indexWhere((f) => f.fichaId == updated.fichaId);
@@ -184,7 +136,6 @@ class _FichaTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AdaptiveColors.of(context);
     final completada = ficha.completada;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -193,75 +144,47 @@ class _FichaTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: completada ? c.teal.withValues(alpha: 0.4) : c.border,
+          border: Border.all(color: completada ? c.teal.withValues(alpha: 0.4) : c.border),
+        ),
+        child: Row(children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: (completada ? c.teal : c.accent).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              completada ? Icons.check_circle_rounded : Icons.assignment_rounded,
+              color: completada ? c.teal : c.accent, size: 22,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color:
-                (completada ? c.teal : c.accent).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                completada
-                    ? Icons.check_circle_rounded
-                    : Icons.assignment_rounded,
-                color: completada ? c.teal : c.accent,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ficha.name,
-                    style: TextStyle(
-                        color: c.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _MiniChip('Nv. ${ficha.level}', c.accent),
-                      const SizedBox(width: 6),
-                      _MiniChip('${ficha.words.length} palabras', c.textDim),
-                      if (ficha.bestScore != null) ...[
-                        const SizedBox(width: 6),
-                        _MiniChip(
-                          '${(ficha.bestScore! * 100).round()}%',
-                          ficha.bestScore! >= ficha.successThreshold
-                              ? c.teal
-                              : c.gold,
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Asignada el ${_fmt(ficha.assignedAt)}',
-                    style: TextStyle(color: c.textDim, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: c.textDim, size: 18),
-          ],
-        ),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(ficha.name, style: TextStyle(color: c.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Row(children: [
+              _MiniChip('Nv. ${ficha.level}', c.accent),
+              const SizedBox(width: 6),
+              _MiniChip('${ficha.words.length} palabras', c.textDim),
+              if (ficha.bestScore != null) ...[
+                const SizedBox(width: 6),
+                _MiniChip('${(ficha.bestScore! * 100).round()}%',
+                    ficha.bestScore! >= ficha.successThreshold ? c.teal : c.gold),
+              ],
+            ]),
+            const SizedBox(height: 4),
+            Text('Asignada el ${_fmt(ficha.assignedAt)}',
+                style: TextStyle(color: c.textDim, fontSize: 11)),
+          ])),
+          Icon(Icons.chevron_right, color: c.textDim, size: 18),
+        ]),
       ),
     );
   }
 
   String _fmt(DateTime dt) {
     final l = dt.toLocal();
-    return '${l.day.toString().padLeft(2, '0')}/${l.month.toString().padLeft(2, '0')}/${l.year}';
+    return '${l.day.toString().padLeft(2,'0')}/${l.month.toString().padLeft(2,'0')}/${l.year}';
   }
 }
 
@@ -275,157 +198,104 @@ class _FichaDetalleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AdaptiveColors.of(context);
-
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(title: Text(ficha.name)),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Cabecera info
-          Row(
-            children: [
-              _InfoChip(
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Nivel ${ficha.level}',
-                  color: c.accent),
-              const SizedBox(width: 8),
-              _InfoChip(
-                  icon: Icons.list_alt_rounded,
-                  label: '${ficha.words.length} palabras',
-                  color: c.textMid),
-              const SizedBox(width: 8),
-              _InfoChip(
-                icon: Icons.flag_rounded,
-                label: '${(ficha.successThreshold * 100).round()}% mín.',
-                color: c.gold,
-              ),
-            ],
+      body: ListView(padding: const EdgeInsets.all(20), children: [
+        Row(children: [
+          _InfoChip(icon: Icons.bar_chart_rounded, label: 'Nivel ${ficha.level}', color: c.accent),
+          const SizedBox(width: 8),
+          _InfoChip(icon: Icons.list_alt_rounded, label: '${ficha.words.length} palabras', color: c.textMid),
+          const SizedBox(width: 8),
+          _InfoChip(icon: Icons.flag_rounded, label: '${(ficha.successThreshold * 100).round()}% mín.', color: c.gold),
+        ]),
+        const SizedBox(height: 20),
+        if (ficha.instructions != null && ficha.instructions!.isNotEmpty) ...[
+          Text('Instrucciones', style: TextStyle(color: c.textMid, fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: c.accent.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: c.accent.withValues(alpha: 0.2)),
+            ),
+            child: Text(ficha.instructions!, style: TextStyle(color: c.textPrimary, fontSize: 14, height: 1.5)),
           ),
           const SizedBox(height: 20),
-
-          // Instrucciones
-          if (ficha.instructions != null &&
-              ficha.instructions!.isNotEmpty) ...[
-            Text('Instrucciones',
-                style: TextStyle(
-                    color: c.textMid,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: c.accent.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.accent.withValues(alpha: 0.2)),
-              ),
-              child: Text(
-                ficha.instructions!,
-                style:
-                TextStyle(color: c.textPrimary, fontSize: 14, height: 1.5),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // Palabras
-          Text('Palabras a practicar',
-              style: TextStyle(
-                  color: c.textMid,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-            ficha.words.map((w) => _PalabraChip(word: w, c: c)).toList(),
-          ),
-          const SizedBox(height: 24),
-
-          // Estado completada
-          if (ficha.completada) ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: c.teal.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.teal.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle_rounded, color: c.teal, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Ficha completada',
-                            style: TextStyle(
-                                color: c.teal,
-                                fontWeight: FontWeight.w700)),
-                        if (ficha.bestScore != null)
-                          Text(
-                            'Mejor puntuación: ${(ficha.bestScore! * 100).round()}%',
-                            style: TextStyle(color: c.teal, fontSize: 13),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Aunque esté completada, puede volver a practicar para mejorar score
-            OutlinedButton.icon(
-              onPressed: () => _iniciarPractica(context),
-              icon: const Icon(Icons.replay_rounded, size: 18),
-              label: const Text('Practicar de nuevo'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: c.accent,
-                side: BorderSide(color: c.accent.withValues(alpha: 0.5)),
-                minimumSize: const Size(double.infinity, 50),
-                shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-          ] else ...[
-            // Botón practicar — conectado al flujo real
-            FilledButton.icon(
-              onPressed: () => _iniciarPractica(context),
-              icon: const Icon(Icons.mic_rounded),
-              label: const Text('Empezar a practicar'),
-              style: FilledButton.styleFrom(
-                backgroundColor: c.accent,
-                foregroundColor: c.bg,
-                minimumSize: const Size(double.infinity, 52),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-          ],
         ],
-      ),
+        Text('Palabras a practicar', style: TextStyle(color: c.textMid, fontSize: 12, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8,
+            children: ficha.words.map((w) => _PalabraChip(word: w, c: c)).toList()),
+        const SizedBox(height: 24),
+        if (ficha.completada) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: c.teal.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: c.teal.withValues(alpha: 0.3)),
+            ),
+            child: Row(children: [
+              Icon(Icons.check_circle_rounded, color: c.teal, size: 22),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Ficha completada', style: TextStyle(color: c.teal, fontWeight: FontWeight.w700)),
+                if (ficha.bestScore != null)
+                  Text('Mejor puntuación: ${(ficha.bestScore! * 100).round()}%',
+                      style: TextStyle(color: c.teal, fontSize: 13)),
+              ])),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => _iniciarPractica(context),
+            icon: const Icon(Icons.replay_rounded, size: 18),
+            label: const Text('Practicar de nuevo'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: c.accent,
+              side: BorderSide(color: c.accent.withValues(alpha: 0.5)),
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ] else ...[
+          FilledButton.icon(
+            onPressed: () => _iniciarPractica(context),
+            icon: const Icon(Icons.mic_rounded),
+            label: const Text('Empezar a practicar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: c.accent, foregroundColor: c.bg,
+              minimumSize: const Size(double.infinity, 52),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ],
+      ]),
     );
   }
 
   void _iniciarPractica(BuildContext context) async {
     final result = await Navigator.of(context).push<FichaAsignada>(
-      MaterialPageRoute(
-        builder: (_) => _PracticarScreen(ficha: ficha, token: token),
-      ),
+      MaterialPageRoute(builder: (_) => _PracticarScreen(ficha: ficha, token: token)),
     );
     if (result != null && context.mounted) {
-      // Volver al listado con la ficha actualizada
       Navigator.of(context).pop(result);
     }
   }
 }
 
 // ── Pantalla de práctica ──────────────────────────────────────────
-// Flujo: abre sesión → graba cada palabra → cierra sesión → marca ficha completada
+
+class _WordResult {
+  final String word;
+  final double score;
+  final bool passed;
+  final bool saltada;
+  const _WordResult({required this.word, required this.score, required this.passed, required this.saltada});
+}
 
 class _PracticarScreen extends StatefulWidget {
   final FichaAsignada ficha;
@@ -439,14 +309,13 @@ class _PracticarScreen extends StatefulWidget {
 class _PracticarScreenState extends State<_PracticarScreen> {
   AdaptiveColors get c => AdaptiveColors.of(context);
 
-  // Estado de la práctica
   int _wordIndex = 0;
   String? _sessionId;
   bool _recording = false;
   bool _loading = false;
-  String? _feedback; // null = sin resultado aún, "ok" / "fallo"
+  String? _feedback;
   double? _lastScore;
-  final List<double> _scores = [];
+  final List<_WordResult> _results = [];
   String? _error;
 
   final AudioRecorder _recorder = AudioRecorder();
@@ -457,8 +326,15 @@ class _PracticarScreenState extends State<_PracticarScreen> {
     _abrirSesion();
   }
 
+  /// BUG-2 FIX: cierre silencioso si el usuario sale sin terminar
   @override
   void dispose() {
+    if (_sessionId != null) {
+      http.patch(
+        Uri.parse('$kServerUrl/exercises/sesiones/$_sessionId/cerrar'),
+        headers: {'Authorization': 'Bearer ${widget.token}', 'Content-Type': 'application/json'},
+      ).catchError((_) {});
+    }
     _recorder.dispose();
     super.dispose();
   }
@@ -475,8 +351,7 @@ class _PracticarScreenState extends State<_PracticarScreen> {
           .post(Uri.parse('$kServerUrl/exercises/sesiones'), headers: _h)
           .timeout(const Duration(seconds: 10));
       if (r.statusCode == 200 || r.statusCode == 201) {
-        final data = jsonDecode(r.body) as Map<String, dynamic>;
-        _sessionId = data['id'] as String;
+        _sessionId = (jsonDecode(r.body) as Map<String, dynamic>)['id'] as String;
       } else {
         setState(() => _error = 'No se pudo abrir la sesión (${r.statusCode})');
       }
@@ -489,51 +364,35 @@ class _PracticarScreenState extends State<_PracticarScreen> {
 
   Future<void> _grabar() async {
     if (_sessionId == null || _recording) return;
-
     final hasPermission = await _recorder.hasPermission();
     if (!hasPermission) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permiso de micrófono denegado')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permiso de micrófono denegado')));
       return;
     }
-
-    setState(() {
-      _recording = true;
-      _feedback = null;
-      _lastScore = null;
-    });
-
+    setState(() { _recording = true; _feedback = null; _lastScore = null; });
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/intento_${DateTime.now().millisecondsSinceEpoch}.wav';
-
     await _recorder.start(const RecordConfig(encoder: AudioEncoder.wav), path: path);
   }
 
   Future<void> _detenerYEnviar() async {
     if (!_recording) return;
     setState(() => _recording = false);
-
     final path = await _recorder.stop();
     if (path == null) return;
 
     setState(() => _loading = true);
     try {
-      // Buscar o crear un ejercicio temporal para esta palabra
-      // Usamos el endpoint de intento directo sin exercise_id
-      // enviando el audio al endpoint /exercises/sesiones/{id}/intentos
-      // con form-data: audio + word
       final word = widget.ficha.words[_wordIndex];
-
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('$kServerUrl/exercises/sesiones/$_sessionId/intentos'),
       )
         ..headers['Authorization'] = 'Bearer ${widget.token}'
         ..fields['word'] = word
-        ..files.add(await http.MultipartFile.fromPath('audio', path));
+      // BUG-3 FIX: nombre explícito para iOS
+        ..files.add(await http.MultipartFile.fromPath('audio', path, filename: 'intento.wav'));
 
       final streamed = await request.send().timeout(const Duration(seconds: 60));
       final res = await http.Response.fromStream(streamed);
@@ -543,7 +402,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
         final score = (data['whisper_score'] as num?)?.toDouble() ?? 0.0;
         final passed = data['passed'] as bool? ?? false;
         _lastScore = score;
-        _scores.add(score);
         setState(() => _feedback = passed ? 'ok' : 'fallo');
       } else {
         final err = jsonDecode(res.body);
@@ -556,39 +414,49 @@ class _PracticarScreenState extends State<_PracticarScreen> {
     }
   }
 
-  Future<void> _siguiente() async {
+  /// MEJORA-1: saltar la palabra actual (score 0)
+  void _saltarPalabra() {
+    _results.add(_WordResult(
+        word: widget.ficha.words[_wordIndex], score: 0, passed: false, saltada: true));
+    _avanzar();
+  }
+
+  void _avanzar() {
     if (_wordIndex < widget.ficha.words.length - 1) {
-      setState(() {
-        _wordIndex++;
-        _feedback = null;
-        _lastScore = null;
-      });
+      setState(() { _wordIndex++; _feedback = null; _lastScore = null; });
     } else {
-      await _terminar();
+      _terminar();
     }
+  }
+
+  void _siguiente() {
+    _results.add(_WordResult(
+      word: widget.ficha.words[_wordIndex],
+      score: _lastScore ?? 0.0,
+      passed: _feedback == 'ok',
+      saltada: false,
+    ));
+    _avanzar();
   }
 
   Future<void> _terminar() async {
     if (_sessionId == null) return;
     setState(() => _loading = true);
 
-    // 1. Cerrar sesión
     try {
-      await http
-          .patch(
-          Uri.parse(
-              '$kServerUrl/exercises/sesiones/$_sessionId/cerrar'),
+      await http.patch(
+          Uri.parse('$kServerUrl/exercises/sesiones/$_sessionId/cerrar'),
           headers: _h)
           .timeout(const Duration(seconds: 10));
+      _sessionId = null; // evita doble cierre en dispose()
     } catch (_) {}
 
-    // 2. Calcular best_score medio de esta sesión
+    final intentosReales = _results.where((r) => !r.saltada).toList();
     double? bestScore;
-    if (_scores.isNotEmpty) {
-      bestScore = _scores.reduce((a, b) => a + b) / _scores.length;
+    if (intentosReales.isNotEmpty) {
+      bestScore = intentosReales.map((r) => r.score).reduce((a, b) => a + b) / intentosReales.length;
     }
 
-    // 3. Marcar ficha completada
     FichaAsignada? updated;
     try {
       final res = await RolesService(widget.token)
@@ -597,13 +465,21 @@ class _PracticarScreenState extends State<_PracticarScreen> {
         completedAt: DateTime.tryParse(res['completed_at'] as String? ?? ''),
         bestScore: (res['best_score'] as num?)?.toDouble(),
       );
-    } catch (e) {
-      // Si falla completar, igualmente cerramos la pantalla
-    }
+    } catch (_) {}
 
     if (mounted) {
       setState(() => _loading = false);
-      Navigator.of(context).pop(updated);
+      final superada = bestScore != null && bestScore >= widget.ficha.successThreshold;
+      // MEJORA-4: pantalla de resultados
+      await Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => _ResultadosScreen(
+          ficha: widget.ficha,
+          results: List.unmodifiable(_results),
+          scoreGlobal: bestScore,
+          superada: superada,
+          fichaActualizada: updated,
+        ),
+      ));
     }
   }
 
@@ -620,175 +496,309 @@ class _PracticarScreenState extends State<_PracticarScreen> {
         actions: [
           TextButton(
             onPressed: (_loading || _recording) ? null : _terminar,
-            child: Text('Terminar',
-                style: TextStyle(
-                    color: c.warn, fontWeight: FontWeight.w600)),
+            child: Text('Terminar', style: TextStyle(color: c.warn, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
       body: _loading && _sessionId == null
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-          ? Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline_rounded,
-                  color: c.warn, size: 48),
-              const SizedBox(height: 12),
-              Text(_error!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: c.textPrimary)),
-              const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: _abrirSesion,
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
-        ),
-      )
+          ? Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline_rounded, color: c.warn, size: 48),
+          const SizedBox(height: 12),
+          Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: c.textPrimary)),
+          const SizedBox(height: 16),
+          OutlinedButton(onPressed: _abrirSesion, child: const Text('Reintentar')),
+        ],
+      )))
           : Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Progreso
-            LinearProgressIndicator(
-              value: (_wordIndex + 1) / words.length,
-              backgroundColor: c.border,
-              valueColor: AlwaysStoppedAnimation(c.accent),
-              borderRadius: BorderRadius.circular(4),
+        child: Column(children: [
+          LinearProgressIndicator(
+            value: (_wordIndex + 1) / words.length,
+            backgroundColor: c.border,
+            valueColor: AlwaysStoppedAnimation(c.accent),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: 8),
+          Text('Palabra ${_wordIndex + 1} de ${words.length}',
+              style: TextStyle(color: c.textDim, fontSize: 12)),
+          const Spacer(),
+
+          // MEJORA-3: AnimatedSwitcher con fade entre palabras
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+            child: Text(
+              word,
+              key: ValueKey(word),
+              style: TextStyle(color: c.textPrimary, fontSize: 48,
+                  fontWeight: FontWeight.w800, letterSpacing: 2),
             ),
+          ),
+          const SizedBox(height: 32),
+
+          // MEJORA-2: feedback visual con gauge
+          if (_feedback != null && !_loading) ...[
+            _FeedbackVisual(feedback: _feedback!, score: _lastScore, c: c),
+            const SizedBox(height: 24),
+          ],
+
+          if (!_loading) ...[
+            GestureDetector(
+              onTap: _recording ? _detenerYEnviar : _grabar,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 88, height: 88,
+                decoration: BoxDecoration(
+                  color: _recording
+                      ? c.warn.withValues(alpha: 0.15)
+                      : c.accent.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _recording ? c.warn : c.accent, width: 2.5),
+                ),
+                child: Icon(_recording ? Icons.stop_rounded : Icons.mic_rounded,
+                    color: _recording ? c.warn : c.accent, size: 40),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _recording ? 'Grabando… toca para parar'
+                  : _feedback != null ? 'Graba de nuevo o continúa' : 'Toca para grabar',
+              style: TextStyle(color: c.textDim, fontSize: 13),
+            ),
+          ] else ...[
+            const CircularProgressIndicator(),
+            const SizedBox(height: 12),
+            Text('Evaluando…', style: TextStyle(color: c.textDim, fontSize: 13)),
+          ],
+
+          const Spacer(),
+
+          // Botones inferiores
+          if (!_loading && !_recording)
+            Row(children: [
+              // MEJORA-1: botón Saltar
+              OutlinedButton(
+                onPressed: _saltarPalabra,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.textDim,
+                  side: BorderSide(color: c.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('Saltar'),
+              ),
+              if (_feedback != null) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _siguiente,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.accent, foregroundColor: c.bg,
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text(isLast ? 'Finalizar ficha' : 'Siguiente palabra',
+                        style: const TextStyle(fontSize: 15)),
+                  ),
+                ),
+              ],
+            ]),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── MEJORA-2: Feedback visual con gauge circular ──────────────────
+
+class _FeedbackVisual extends StatelessWidget {
+  final String feedback;
+  final double? score;
+  final AdaptiveColors c;
+  const _FeedbackVisual({required this.feedback, required this.score, required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    final ok = feedback == 'ok';
+    final saltada = feedback == 'saltada';
+    final color = ok ? c.teal : saltada ? c.textDim : c.warn;
+    final icon = ok ? Icons.check_circle_rounded : saltada ? Icons.skip_next_rounded : Icons.cancel_rounded;
+    final label = ok ? '¡Correcto!' : saltada ? 'Saltada' : 'Inténtalo de nuevo';
+
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (score != null) ...[
+        SizedBox(width: 80, height: 80,
+          child: Stack(alignment: Alignment.center, children: [
+            CircularProgressIndicator(
+              value: score,
+              strokeWidth: 6,
+              backgroundColor: color.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+            Text('${(score! * 100).round()}%',
+                style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w800)),
+          ]),
+        ),
+        const SizedBox(height: 12),
+      ],
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 8),
+        Text(label, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w700)),
+      ]),
+    ]);
+  }
+}
+
+// ── MEJORA-4: Pantalla de resultados ─────────────────────────────
+
+class _ResultadosScreen extends StatelessWidget {
+  final FichaAsignada ficha;
+  final List<_WordResult> results;
+  final double? scoreGlobal;
+  final bool superada;
+  final FichaAsignada? fichaActualizada;
+  const _ResultadosScreen({
+    required this.ficha, required this.results,
+    required this.scoreGlobal, required this.superada,
+    required this.fichaActualizada,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AdaptiveColors.of(context);
+    final correctas = results.where((r) => r.passed).length;
+    final total = results.length;
+    final color = superada ? c.teal : c.gold;
+
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(children: [
+            const Spacer(),
+            Text(superada ? '🎉' : '💪', style: const TextStyle(fontSize: 64)),
+            const SizedBox(height: 16),
+            Text(superada ? '¡Ficha superada!' : '¡Sesión completada!',
+                style: TextStyle(color: c.textPrimary, fontSize: 24, fontWeight: FontWeight.w800),
+                textAlign: TextAlign.center),
             const SizedBox(height: 8),
             Text(
-              'Palabra ${_wordIndex + 1} de ${words.length}',
-              style: TextStyle(color: c.textDim, fontSize: 12),
-            ),
-            const Spacer(),
-
-            // Palabra actual
-            Text(
-              word,
-              style: TextStyle(
-                color: c.textPrimary,
-                fontSize: 48,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2,
-              ),
+              superada
+                  ? 'Has superado el umbral del ${(ficha.successThreshold * 100).round()}%'
+                  : 'Sigue practicando para mejorar tu puntuación',
+              style: TextStyle(color: c.textDim, fontSize: 14, height: 1.5),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
 
-            // Feedback
-            if (_feedback != null && !_loading) ...[
-              _FeedbackBadge(
-                  feedback: _feedback!, score: _lastScore, c: c),
-              const SizedBox(height: 24),
+            // Score global circular
+            if (scoreGlobal != null) ...[
+              SizedBox(width: 120, height: 120,
+                child: Stack(alignment: Alignment.center, children: [
+                  CircularProgressIndicator(
+                    value: scoreGlobal,
+                    strokeWidth: 9,
+                    backgroundColor: color.withValues(alpha: 0.15),
+                    valueColor: AlwaysStoppedAnimation(color),
+                  ),
+                  Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text('${(scoreGlobal! * 100).round()}%',
+                        style: TextStyle(color: color, fontSize: 28, fontWeight: FontWeight.w900)),
+                    Text('score', style: TextStyle(color: c.textDim, fontSize: 11)),
+                  ]),
+                ]),
+              ),
+              const SizedBox(height: 28),
             ],
 
-            // Botón grabar / detener
-            if (!_loading) ...[
-              GestureDetector(
-                onTap: _recording ? _detenerYEnviar : _grabar,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 88,
-                  height: 88,
-                  decoration: BoxDecoration(
-                    color: _recording
-                        ? c.warn.withValues(alpha: 0.15)
-                        : c.accent.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _recording ? c.warn : c.accent,
-                      width: 2.5,
-                    ),
-                  ),
-                  child: Icon(
-                    _recording ? Icons.stop_rounded : Icons.mic_rounded,
-                    color: _recording ? c.warn : c.accent,
-                    size: 40,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _recording
-                    ? 'Grabando… toca para parar'
-                    : _feedback != null
-                    ? 'Graba de nuevo o continúa'
-                    : 'Toca para grabar',
-                style: TextStyle(color: c.textDim, fontSize: 13),
-              ),
-            ] else ...[
-              const CircularProgressIndicator(),
-              const SizedBox(height: 12),
-              Text('Evaluando…',
-                  style: TextStyle(color: c.textDim, fontSize: 13)),
-            ],
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              _StatPill(label: 'Correctas', value: '$correctas/$total', color: c.teal),
+              const SizedBox(width: 12),
+              _StatPill(label: 'Saltadas',
+                  value: '${results.where((r) => r.saltada).length}', color: c.textDim),
+            ]),
+            const SizedBox(height: 28),
 
-            const Spacer(),
-
-            // Botón siguiente / terminar
-            if (_feedback != null && !_loading)
-              FilledButton(
-                onPressed: _siguiente,
-                style: FilledButton.styleFrom(
-                  backgroundColor: c.accent,
-                  foregroundColor: c.bg,
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+            // Lista por palabra
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: c.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: c.border),
                 ),
-                child: Text(
-                  isLast ? 'Finalizar ficha' : 'Siguiente palabra',
-                  style: const TextStyle(fontSize: 15),
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: results.length,
+                  separatorBuilder: (_, __) => Divider(height: 1, color: c.border.withValues(alpha: 0.5)),
+                  itemBuilder: (_, i) {
+                    final r = results[i];
+                    final rColor = r.saltada ? c.textDim : r.passed ? c.teal : c.warn;
+                    return ListTile(
+                      dense: true,
+                      leading: Icon(
+                        r.saltada ? Icons.skip_next_rounded
+                            : r.passed ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                        color: rColor, size: 20,
+                      ),
+                      title: Text(r.word, style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                      trailing: r.saltada
+                          ? Text('—', style: TextStyle(color: c.textDim, fontSize: 13))
+                          : Text('${(r.score * 100).round()}%',
+                          style: TextStyle(color: rColor, fontSize: 13, fontWeight: FontWeight.w700)),
+                    );
+                  },
                 ),
               ),
-          ],
+            ),
+            const SizedBox(height: 24),
+
+            FilledButton(
+              onPressed: () {
+                Navigator.of(context).popUntil(
+                        (route) => route.isFirst || route.settings.name == '/trabajo');
+                Navigator.of(context).pop(fichaActualizada);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: c.accent, foregroundColor: c.bg,
+                minimumSize: const Size(double.infinity, 52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Volver a mis fichas', style: TextStyle(fontSize: 15)),
+            ),
+          ]),
         ),
       ),
     );
   }
 }
 
-class _FeedbackBadge extends StatelessWidget {
-  final String feedback;
-  final double? score;
-  final AdaptiveColors c;
-  const _FeedbackBadge(
-      {required this.feedback, required this.score, required this.c});
+class _StatPill extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _StatPill({required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final ok = feedback == 'ok';
-    final color = ok ? c.teal : c.warn;
-    final icon =
-    ok ? Icons.check_circle_rounded : Icons.cancel_rounded;
-    final label = ok
-        ? '¡Correcto! ${score != null ? '${(score! * 100).round()}%' : ''}'
-        : 'Inténtalo de nuevo ${score != null ? '(${(score! * 100).round()}%)' : ''}';
-
+    final c = AdaptiveColors.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(width: 10),
-          Text(label,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700)),
-        ],
-      ),
+      child: Column(children: [
+        Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800)),
+        Text(label, style: TextStyle(color: c.textDim, fontSize: 11)),
+      ]),
     );
   }
 }
@@ -801,14 +811,8 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.text, this.c);
 
   @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: TextStyle(
-        color: c.textMid,
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.4),
-  );
+  Widget build(BuildContext context) => Text(text,
+      style: TextStyle(color: c.textMid, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4));
 }
 
 class _MiniChip extends StatelessWidget {
@@ -819,13 +823,8 @@ class _MiniChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(5),
-    ),
-    child: Text(label,
-        style: TextStyle(
-            color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+    decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(5)),
+    child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
   );
 }
 
@@ -833,30 +832,20 @@ class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  const _InfoChip(
-      {required this.icon, required this.label, required this.color});
+  const _InfoChip({required this.icon, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) => Container(
-    padding:
-    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(8),
+      color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8),
       border: Border.all(color: color.withValues(alpha: 0.25)),
     ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: 5),
-        Text(label,
-            style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w600)),
-      ],
-    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 13, color: color),
+      const SizedBox(width: 5),
+      Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+    ]),
   );
 }
 
@@ -869,16 +858,8 @@ class _PalabraChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     decoration: BoxDecoration(
-      color: c.surface,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: c.border),
+      color: c.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: c.border),
     ),
-    child: Text(
-      word,
-      style: TextStyle(
-          color: c.textPrimary,
-          fontSize: 15,
-          fontWeight: FontWeight.w500),
-    ),
+    child: Text(word, style: TextStyle(color: c.textPrimary, fontSize: 15, fontWeight: FontWeight.w500)),
   );
 }
