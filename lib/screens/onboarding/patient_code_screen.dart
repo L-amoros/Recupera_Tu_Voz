@@ -1,5 +1,3 @@
-// lib/screens/onboarding/patient_code_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/app_user.dart';
@@ -41,7 +39,7 @@ class _PatientCodeScreenState extends State<PatientCodeScreen> {
 
     try {
       final svc  = RolesService(widget.user.token);
-      final data = await svc.vincularPaciente(codigo);
+      await svc.vincularPaciente(codigo);
 
       final roleInfo = await svc.getRoleInfo();
       final updated  = widget.user.copyWith(
@@ -51,11 +49,8 @@ class _PatientCodeScreenState extends State<PatientCodeScreen> {
         logopedaName: roleInfo['logopeda_name'] as String?,
       );
 
-      if (mounted) {
-        // NO hacer pop aquí — AppRouter gestiona la transición al recibir
-        // roleSet=true y hace popUntil desde su propio contexto.
-        widget.onLinked(updated);
-      }
+      if (!mounted) return;
+      widget.onLinked(updated);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -160,8 +155,6 @@ class _PatientCodeScreenState extends State<PatientCodeScreen> {
               const SizedBox(height: 12),
               Center(
                 child: TextButton(
-                  // Al pulsar "Volver" desde PatientCodeScreen (que llegó via pushReplacement),
-                  // esto cierra toda la pantalla y vuelve al contexto del AppRouter.
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text('Volver a elegir perfil'),
                 ),

@@ -1,5 +1,3 @@
-// lib/screens/panel/logopeda_fichas_screen.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -102,6 +100,24 @@ class _FichasService {
     }
   }
 
+  /// Asigna la ficha a todos los pacientes del logopeda con el nivel indicado.
+  /// Devuelve cuántos pacientes recibieron la ficha (assigned_count).
+  Future<int> asignarFichaPorNivel(String fichaId, int nivel) async {
+    final r = await http
+        .post(
+      Uri.parse('$kServerUrl/fichas/$fichaId/asignar-nivel'),
+      headers: _h,
+      body: jsonEncode({'nivel': nivel}),
+    )
+        .timeout(const Duration(seconds: 10));
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      final err = jsonDecode(r.body);
+      throw Exception(err['detail'] ?? 'Error asignando ficha por nivel');
+    }
+    final data = jsonDecode(r.body) as Map<String, dynamic>;
+    return (data['assigned_count'] as int?) ?? 0;
+  }
+
   Future<void> eliminarFicha(String fichaId) async {
     final r = await http
         .delete(Uri.parse('$kServerUrl/fichas/$fichaId'), headers: _h)
@@ -163,7 +179,6 @@ class _LogopedaFichasScreenState extends State<LogopedaFichasScreen> {
   }
 
   void _asignar(FichaLogopeda ficha) async {
-    // Cargar pacientes
     List<PacienteInfo> pacientes;
     try {
       pacientes = await RolesService(widget.user.token).getMisPacientes();
@@ -177,15 +192,10 @@ class _LogopedaFichasScreenState extends State<LogopedaFichasScreen> {
     }
 
     if (!mounted) return;
-    if (pacientes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No tienes pacientes vinculados')),
-      );
-      return;
-    }
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,  // BUG 4 FIX: necesario para ConstrainedBox
       backgroundColor: c.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -299,18 +309,30 @@ class _LogopedaFichasScreenState extends State<LogopedaFichasScreen> {
       );
     }
 
+    // Agrupar fichas por nivel para mejor UX
+    final byLevel = <int, List<FichaLogopeda>>{};
+    for (final f in _fichas) {
+      byLevel.putIfAbsent(f.level, () => []).add(f);
+    }
+    final levels = byLevel.keys.toList()..sort();
+
     return RefreshIndicator(
       onRefresh: _load,
       color: c.accent,
-      child: ListView.separated(
+      child: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: _fichas.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (_, i) => _FichaTile(
-          ficha: _fichas[i],
-          onAsignar: () => _asignar(_fichas[i]),
-          onEliminar: () => _eliminar(_fichas[i]),
-        ),
+        children: [
+          for (final lvl in levels) ...[
+            _SectionHeader('Nivel $lvl (${byLevel[lvl]!.length})', c),
+            const SizedBox(height: 8),
+            ...byLevel[lvl]!.map((f) => _FichaTile(
+              ficha: f,
+              onAsignar: () => _asignar(f),
+              onEliminar: () => _eliminar(f),
+            )),
+            const SizedBox(height: 16),
+          ],
+        ],
       ),
     );
   }
@@ -328,6 +350,7 @@ class _FichaTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AdaptiveColors.of(context);
     return Container(
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: c.surface,
@@ -455,151 +478,151 @@ class _NuevaFichaSheetState extends State<_NuevaFichaSheet> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, mq.viewInsets.bottom + 20),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
+    // BUG 4 FIX: altura máxima + padding para el teclado
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: mq.size.height * 0.92,
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, mq.viewInsets.bottom + 20),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text('Nueva ficha',
-                style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              Text('Nueva ficha',
+                  style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
 
-            // Nombre
-            _Label('Nombre', c),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _nameCtrl,
-              style: TextStyle(color: c.textPrimary),
-              decoration: _deco('Ej: Vocales básicas', c),
-            ),
-            const SizedBox(height: 16),
+              _Label('Nombre', c),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _nameCtrl,
+                style: TextStyle(color: c.textPrimary),
+                decoration: _deco('Ej: Vocales básicas', c),
+              ),
+              const SizedBox(height: 16),
 
-            // Nivel
-            _Label('Nivel', c),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.remove_circle_outline_rounded, color: c.textMid),
-                  onPressed: _level > 1 ? () => setState(() => _level--) : null,
-                ),
-                Expanded(
-                  child: Text('Nivel $_level',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
-                ),
-                IconButton(
-                  icon: Icon(Icons.add_circle_outline_rounded, color: c.accent),
-                  onPressed: () => setState(() => _level++),
+              _Label('Nivel', c),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.remove_circle_outline_rounded, color: c.textMid),
+                    onPressed: _level > 1 ? () => setState(() => _level--) : null,
+                  ),
+                  Expanded(
+                    child: Text('Nivel $_level',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add_circle_outline_rounded, color: c.accent),
+                    onPressed: () => setState(() => _level++),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              _Label('Palabras', c),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _wordCtrl,
+                      style: TextStyle(color: c.textPrimary),
+                      decoration: _deco('Añadir palabra', c),
+                      onSubmitted: (_) => _addWord(),
+                      textInputAction: TextInputAction.done,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _addWord,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.accent,
+                      foregroundColor: c.bg,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    child: const Icon(Icons.add_rounded, size: 20),
+                  ),
+                ],
+              ),
+              if (_words.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _words.map((w) => Chip(
+                    label: Text(w, style: TextStyle(color: c.textPrimary, fontSize: 13)),
+                    backgroundColor: c.accent.withValues(alpha: 0.1),
+                    side: BorderSide(color: c.accent.withValues(alpha: 0.3)),
+                    deleteIcon: Icon(Icons.close, size: 14, color: c.textDim),
+                    onDeleted: () => setState(() => _words.remove(w)),
+                  )).toList(),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Palabras
-            _Label('Palabras', c),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _wordCtrl,
-                    style: TextStyle(color: c.textPrimary),
-                    decoration: _deco('Añadir palabra', c),
-                    onSubmitted: (_) => _addWord(),
-                    textInputAction: TextInputAction.done,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _addWord,
+              _Label('Instrucciones (opcional)', c),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _instrCtrl,
+                style: TextStyle(color: c.textPrimary),
+                maxLines: 3,
+                decoration: _deco('Indicaciones para el paciente...', c),
+              ),
+              const SizedBox(height: 16),
+
+              _Label('Umbral de éxito: ${(_threshold * 100).round()}%', c),
+              Slider(
+                value: _threshold,
+                min: 0.5, max: 1.0, divisions: 10,
+                activeColor: c.accent,
+                inactiveColor: c.border,
+                onChanged: (v) => setState(() => _threshold = v),
+              ),
+
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!, style: TextStyle(color: c.warn, fontSize: 13)),
+              ],
+              const SizedBox(height: 16),
+
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _saving ? null : _crear,
                   style: FilledButton.styleFrom(
                     backgroundColor: c.accent,
                     foregroundColor: c.bg,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Icon(Icons.add_rounded, size: 20),
+                  child: _saving
+                      ? SizedBox(height: 20, width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: c.bg))
+                      : const Text('Crear ficha', style: TextStyle(fontSize: 15)),
                 ),
-              ],
-            ),
-            if (_words.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _words.map((w) => Chip(
-                  label: Text(w, style: TextStyle(color: c.textPrimary, fontSize: 13)),
-                  backgroundColor: c.accent.withValues(alpha: 0.1),
-                  side: BorderSide(color: c.accent.withValues(alpha: 0.3)),
-                  deleteIcon: Icon(Icons.close, size: 14, color: c.textDim),
-                  onDeleted: () => setState(() => _words.remove(w)),
-                )).toList(),
               ),
             ],
-            const SizedBox(height: 16),
-
-            // Instrucciones
-            _Label('Instrucciones (opcional)', c),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _instrCtrl,
-              style: TextStyle(color: c.textPrimary),
-              maxLines: 3,
-              decoration: _deco('Indicaciones para el paciente...', c),
-            ),
-            const SizedBox(height: 16),
-
-            // Umbral
-            _Label('Umbral de éxito: ${(_threshold * 100).round()}%', c),
-            Slider(
-              value: _threshold,
-              min: 0.5, max: 1.0, divisions: 10,
-              activeColor: c.accent,
-              inactiveColor: c.border,
-              onChanged: (v) => setState(() => _threshold = v),
-            ),
-
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!, style: TextStyle(color: c.warn, fontSize: 13)),
-            ],
-            const SizedBox(height: 16),
-
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _saving ? null : _crear,
-                style: FilledButton.styleFrom(
-                  backgroundColor: c.accent,
-                  foregroundColor: c.bg,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _saving
-                    ? SizedBox(height: 20, width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: c.bg))
-                    : const Text('Crear ficha', style: TextStyle(fontSize: 15)),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ── Sheet asignar ─────────────────────────────────────────────────
+// ── Sheet asignar (individual + por nivel) ────────────────────────
 
 class _AsignarSheet extends StatefulWidget {
   final FichaLogopeda ficha;
@@ -611,12 +634,28 @@ class _AsignarSheet extends StatefulWidget {
   State<_AsignarSheet> createState() => _AsignarSheetState();
 }
 
+enum _AsignarMode { individual, porNivel }
+
 class _AsignarSheetState extends State<_AsignarSheet> {
   AdaptiveColors get c => AdaptiveColors.of(context);
+
+  _AsignarMode _mode = _AsignarMode.individual;
   final Set<String> _selected = {};
+  int _nivelSeleccionado = 1;
   bool _saving = false;
 
-  Future<void> _asignar() async {
+  // Niveles disponibles entre los pacientes del logopeda
+  late final List<int> _nivelesDisponibles;
+
+  @override
+  void initState() {
+    super.initState();
+    final niveles = widget.pacientes.map((p) => p.currentLevel).toSet().toList()..sort();
+    _nivelesDisponibles = niveles.isEmpty ? [1] : niveles;
+    _nivelSeleccionado = _nivelesDisponibles.first;
+  }
+
+  Future<void> _asignarIndividual() async {
     if (_selected.isEmpty) return;
     setState(() => _saving = true);
     int ok = 0;
@@ -637,67 +676,259 @@ class _AsignarSheetState extends State<_AsignarSheet> {
     }
   }
 
+  Future<void> _asignarPorNivel() async {
+    setState(() => _saving = true);
+    try {
+      final count = await widget.svc.asignarFichaPorNivel(
+          widget.ficha.id, _nivelSeleccionado);
+      if (mounted) {
+        Navigator.of(context).pop();
+        final msg = count > 0
+            ? 'Ficha asignada a $count paciente${count != 1 ? 's' : ''} del nivel $_nivelSeleccionado'
+            : 'Los pacientes del nivel $_nivelSeleccionado ya tenían esta ficha';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: c.teal),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: c.warn),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text('Asignar "${widget.ficha.name}"',
-              style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text('Selecciona los pacientes',
-              style: TextStyle(color: c.textDim, fontSize: 13)),
-          const SizedBox(height: 16),
-
-          ...widget.pacientes.map((p) {
-            final sel = _selected.contains(p.userId);
-            return CheckboxListTile(
-              value: sel,
-              onChanged: (v) => setState(() {
-                if (v == true) _selected.add(p.userId); else _selected.remove(p.userId);
-              }),
-              activeColor: c.accent,
-              title: Text(p.name.isNotEmpty ? p.name : p.email,
-                  style: TextStyle(color: c.textPrimary, fontSize: 14)),
-              subtitle: Text(p.email, style: TextStyle(color: c.textDim, fontSize: 12)),
-              contentPadding: EdgeInsets.zero,
-            );
-          }),
-
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: (_selected.isEmpty || _saving) ? null : _asignar,
-              style: FilledButton.styleFrom(
-                backgroundColor: c.accent,
-                foregroundColor: c.bg,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    final mq = MediaQuery.of(context);
+    return ConstrainedBox(
+      // BUG 4 FIX: evitar overflow cuando hay muchos pacientes
+      constraints: BoxConstraints(maxHeight: mq.size.height * 0.85),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, mq.viewInsets.bottom + 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(2)),
               ),
-              child: _saving
-                  ? SizedBox(height: 20, width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: c.bg))
-                  : Text('Asignar a ${_selected.length} paciente${_selected.length != 1 ? 's' : ''}'),
             ),
+            const SizedBox(height: 16),
+            Text('Asignar "${widget.ficha.name}"',
+                style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+
+            // Toggle individual / por nivel
+            Row(
+              children: [
+                Expanded(child: _ModeBtn(
+                  label: 'Individual',
+                  icon: Icons.person_rounded,
+                  selected: _mode == _AsignarMode.individual,
+                  onTap: () => setState(() => _mode = _AsignarMode.individual),
+                  c: c,
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: _ModeBtn(
+                  label: 'Por nivel',
+                  icon: Icons.bar_chart_rounded,
+                  selected: _mode == _AsignarMode.porNivel,
+                  onTap: () => setState(() => _mode = _AsignarMode.porNivel),
+                  c: c,
+                )),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            if (_mode == _AsignarMode.individual) ...[
+              Text('Selecciona los pacientes',
+                  style: TextStyle(color: c.textDim, fontSize: 13)),
+              const SizedBox(height: 8),
+              if (widget.pacientes.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text('No tienes pacientes vinculados.',
+                      style: TextStyle(color: c.textDim)),
+                )
+              else
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: widget.pacientes.map((p) {
+                        final sel = _selected.contains(p.userId);
+                        return CheckboxListTile(
+                          value: sel,
+                          onChanged: (v) => setState(() {
+                            if (v == true) _selected.add(p.userId);
+                            else _selected.remove(p.userId);
+                          }),
+                          activeColor: c.accent,
+                          title: Text(p.name.isNotEmpty ? p.name : p.email,
+                              style: TextStyle(color: c.textPrimary, fontSize: 14)),
+                          subtitle: Row(
+                            children: [
+                              Text(p.email, style: TextStyle(color: c.textDim, fontSize: 12)),
+                              const SizedBox(width: 6),
+                              _Chip('Nv. ${p.currentLevel}', c.accent),
+                            ],
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: (_selected.isEmpty || _saving) ? null : _asignarIndividual,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: c.accent,
+                    foregroundColor: c.bg,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _saving
+                      ? SizedBox(height: 20, width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: c.bg))
+                      : Text('Asignar a ${_selected.length} paciente${_selected.length != 1 ? 's' : ''}'),
+                ),
+              ),
+            ] else ...[
+              // Modo por nivel
+              Text('Elige el nivel al que quieres asignar esta ficha.\nTodos los pacientes de ese nivel la recibirán.',
+                  style: TextStyle(color: c.textDim, fontSize: 13, height: 1.5)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Text('Nivel:', style: TextStyle(color: c.textMid, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 12),
+                  ..._nivelesDisponibles.map((n) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text('$n'),
+                      selected: _nivelSeleccionado == n,
+                      onSelected: (_) => setState(() => _nivelSeleccionado = n),
+                      selectedColor: c.accent.withValues(alpha: 0.2),
+                      labelStyle: TextStyle(
+                        color: _nivelSeleccionado == n ? c.accent : c.textMid,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      side: BorderSide(
+                        color: _nivelSeleccionado == n
+                            ? c.accent
+                            : c.border,
+                      ),
+                    ),
+                  )),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Mostrar cuántos pacientes hay en ese nivel
+              Builder(builder: (ctx) {
+                final count = widget.pacientes
+                    .where((p) => p.currentLevel == _nivelSeleccionado)
+                    .length;
+                return Text(
+                  '$count paciente${count != 1 ? 's' : ''} en el nivel $_nivelSeleccionado',
+                  style: TextStyle(color: c.textDim, fontSize: 12),
+                );
+              }),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _asignarPorNivel,
+                  icon: const Icon(Icons.group_add_rounded, size: 18),
+                  label: _saving
+                      ? const SizedBox(height: 20, width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text('Asignar a todos en nivel $_nivelSeleccionado'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: c.accent,
+                    foregroundColor: c.bg,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  final AdaptiveColors c;
+  const _ModeBtn({required this.label, required this.icon, required this.selected,
+    required this.onTap, required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? c.accent.withValues(alpha: 0.12) : c.bg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? c.accent : c.border,
+            width: selected ? 1.5 : 1,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: selected ? c.accent : c.textDim),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                  color: selected ? c.accent : c.textMid,
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                )),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final String text;
+  final AdaptiveColors c;
+  const _SectionHeader(this.text, this.c);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 2),
+    child: Text(
+      text,
+      style: TextStyle(
+          color: c.textMid,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4),
+    ),
+  );
+}
 
 InputDecoration _deco(String hint, AdaptiveColors c) => InputDecoration(
   hintText: hint,

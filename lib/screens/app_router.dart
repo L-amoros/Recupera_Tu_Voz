@@ -1,5 +1,3 @@
-// lib/screens/app_router.dart
-
 import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../models/app_settings.dart';
@@ -57,17 +55,13 @@ class _AppRouterState extends State<AppRouter> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _loading = false; _error = e.toString(); });
+      setState(() { _loading = false; _error = 'Sin conexión al servidor'; });
     }
   }
-
   void _onRoleSet(AppUser updated) {
     if (!mounted) return;
     widget.onUserChanged(updated);
     setState(() => _user = updated);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
-    });
   }
 
   @override
@@ -84,13 +78,16 @@ class _AppRouterState extends State<AppRouter> {
             children: [
               const Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey),
               const SizedBox(height: 12),
-              const Text('Error de conexión'),
+              const Text(
+                'No se pudo conectar con el servidor.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15),
+              ),
               const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Text(_error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 8),
               TextButton(onPressed: _fetchRole, child: const Text('Reintentar')),
@@ -108,7 +105,7 @@ class _AppRouterState extends State<AppRouter> {
       return LogopedaShell(
         user: _user,
         settings: widget.settings,
-        onLogout: widget.onLogout, // ← ahora se pasa
+        onLogout: widget.onLogout,
       );
     }
 
