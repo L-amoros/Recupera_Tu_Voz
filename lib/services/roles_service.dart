@@ -91,6 +91,18 @@ class FichaAsignada {
   );
 
   bool get completada => completedAt != null;
+
+  FichaAsignada copyWith({DateTime? completedAt, double? bestScore}) => FichaAsignada(
+    fichaId:          fichaId,
+    name:             name,
+    level:            level,
+    words:            words,
+    instructions:     instructions,
+    successThreshold: successThreshold,
+    assignedAt:       assignedAt,
+    completedAt:      completedAt ?? this.completedAt,
+    bestScore:        bestScore ?? this.bestScore,
+  );
 }
 
 // ── Servicio ──────────────────────────────────────────────────────
@@ -195,5 +207,26 @@ class RolesService {
     if (r.statusCode != 200) throw Exception('Error cargando fichas: ${r.body}');
     final list = jsonDecode(r.body) as List<dynamic>;
     return list.map((e) => FichaAsignada.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// El paciente marca una ficha como completada y envía su mejor score.
+  /// Devuelve los datos actualizados (completed_at, best_score).
+  Future<Map<String, dynamic>> completarFicha(
+      String fichaId, {
+        double? bestScore,
+      }) async {
+    final r = await http
+        .patch(
+      Uri.parse('$kServerUrl/fichas/$fichaId/completar'),
+      headers: _headers,
+      body: jsonEncode({'best_score': bestScore}),
+    )
+        .timeout(const Duration(seconds: 10));
+
+    if (r.statusCode != 200) {
+      final err = jsonDecode(r.body);
+      throw Exception(err['detail'] ?? 'Error al completar la ficha');
+    }
+    return jsonDecode(r.body) as Map<String, dynamic>;
   }
 }

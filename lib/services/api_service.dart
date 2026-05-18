@@ -287,6 +287,59 @@ class FrasesApiService {
         .toList();
   }
 }
+
+class VideosApiService {
+  final String token;
+  const VideosApiService(this.token);
+
+  Map<String, String> get _headers => {
+    'Authorization': 'Bearer $token',
+  };
+
+  Future<Map<String, dynamic>> uploadVideo({
+    required Uint8List bytes,
+    required String filename,
+    required String title,
+    required String contentType, // "general" | "demo_ejercicio" | ...
+    String visibility = 'todos',
+    int? level,
+    String? description,
+  }) async {
+    final uri = Uri.parse(
+      '$kServerUrl/videos/upload'
+          '?title=${Uri.encodeComponent(title)}'
+          '&content_type=$contentType'
+          '&visibility=$visibility'
+          '${level != null ? "&level=$level" : ""}'
+          '${description != null ? "&description=${Uri.encodeComponent(description)}" : ""}',
+    );
+
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(http.MultipartFile.fromBytes(
+        'file', bytes, filename: filename,
+      ));
+
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
+    final res = await http.Response.fromStream(streamed);
+
+    if (res.statusCode != 201) {
+      throw ApiException(_extractDetail(res), statusCode: res.statusCode);
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> listarVideos({int? level}) async {
+    final uri = Uri.parse(
+      '$kServerUrl/videos${level != null ? "?level=$level" : ""}',
+    );
+    final res = await http
+        .get(uri, headers: {..._headers, 'Content-Type': 'application/json'})
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) throw ApiException(_extractDetail(res));
+    return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+  }
+}
 // ─────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────

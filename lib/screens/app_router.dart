@@ -48,9 +48,9 @@ class _AppRouterState extends State<AppRouter> {
       if (!mounted) return;
       setState(() {
         _user = _user.copyWith(
-          role:        roleInfo['role']         as String?,
-          roleSet:     roleInfo['role_set']     as bool?,
-          logopedaId:  roleInfo['logopeda_id']  as String?,
+          role:         roleInfo['role']         as String?,
+          roleSet:      roleInfo['role_set']     as bool?,
+          logopedaId:   roleInfo['logopeda_id']  as String?,
           logopedaName: roleInfo['logopeda_name'] as String?,
         );
         _loading = false;
@@ -61,20 +61,12 @@ class _AppRouterState extends State<AppRouter> {
     }
   }
 
-  /// Llamado cuando el usuario acaba de elegir rol (logopeda o paciente).
-  /// PatientCodeScreen NO hace pop antes de llamar esto — AppRouter decide
-  /// qué mostrar solo con setState, sin tocar el Navigator.
   void _onRoleSet(AppUser updated) {
     if (!mounted) return;
     widget.onUserChanged(updated);
     setState(() => _user = updated);
-    // Si hay pantallas de onboarding encima (RoleSelectionScreen /
-    // PatientCodeScreen vía pushReplacement), las eliminamos ahora que
-    // AppRouter ya sabe el rol y va a renderizar AppShell o LogopedaShell.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     });
   }
 
@@ -96,11 +88,9 @@ class _AppRouterState extends State<AppRouter> {
               const SizedBox(height: 4),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
+                child: Text(_error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ),
               const SizedBox(height: 8),
               TextButton(onPressed: _fetchRole, child: const Text('Reintentar')),
@@ -118,6 +108,7 @@ class _AppRouterState extends State<AppRouter> {
       return LogopedaShell(
         user: _user,
         settings: widget.settings,
+        onLogout: widget.onLogout, // ← ahora se pasa
       );
     }
 
