@@ -3,6 +3,7 @@ import '../models/app_settings.dart';
 import '../models/app_user.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
+import '../services/roles_service.dart';
 import '../widgets/shared_widgets.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -11,6 +12,7 @@ class ProfileScreen extends StatefulWidget {
   final ValueChanged<AppSettings> onSettingsChanged;
   final VoidCallback onCloneVoice;
   final VoidCallback onLogout;
+  final ValueChanged<AppUser>? onUserChanged;
 
   const ProfileScreen({
     super.key,
@@ -19,6 +21,7 @@ class ProfileScreen extends StatefulWidget {
     required this.onSettingsChanged,
     required this.onCloneVoice,
     required this.onLogout,
+    this.onUserChanged,
   });
 
   @override
@@ -76,6 +79,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmarDesvincular() async {
+    final c = AdaptiveColors.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: c.surface,
+        title: Text('Desvincular logopeda', style: TextStyle(color: c.textPrimary)),
+        content: Text(
+          '¿Seguro que quieres desvincularte de tu logopeda? '
+              'Perderás acceso a las fichas asignadas.',
+          style: TextStyle(color: c.textMid),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar', style: TextStyle(color: c.textDim)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Desvincular', style: TextStyle(color: c.warn, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await RolesService(widget.user.token).desvincularme();
+      if (!mounted) return;
+      final updatedUser = widget.user.copyWith(logopedaId: null, logopedaName: null);
+      widget.onUserChanged?.call(updatedUser);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Desvinculado correctamente'),
+            backgroundColor: c.teal,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: c.warn),
+        );
+      }
+    }
   }
 
   void _confirmLogout() {
@@ -275,6 +326,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // ── Sesión ────────────────────────────────────────────
           const SectionLabel('Sesión'),
           const SizedBox(height: 8),
+          // ── Logopeda vinculado ───────────────────────────────
+          if (widget.user.isPatient && widget.user.logopedaId != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: c.border),
+              ),
+              child: Row(children: [
+                Icon(Icons.medical_services_outlined, color: c.teal, size: 18),
+                const SizedBox(width: 10),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Mi logopeda', style: TextStyle(color: c.textMid, fontSize: 11)),
+                  Text(widget.user.logopedaName ?? 'Vinculado', style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                ])),
+                TextButton(
+                  onPressed: _confirmarDesvincular,
+                  child: Text('Desvincular', style: TextStyle(color: c.warn, fontSize: 12)),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 8),
+          ],
+
           GestureDetector(
             onTap: _confirmLogout,
             child: Container(

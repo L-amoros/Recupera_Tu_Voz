@@ -130,14 +130,14 @@ class _LogopedaCodigoScreenState extends State<LogopedaCodigoScreen> {
                                 fontSize: 38,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 6,
-                                color: Color(0xFF085041),
+                                color: Color(0xFF1CE7B2),
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               _formatExpiry(_expiresAt),
                               style: const TextStyle(
-                                  fontSize: 13, color: Color(0xFF0F6E56)),
+                                  fontSize: 13, color: Color(0xFF1CE7B2)),
                             ),
                           ],
                         ),
@@ -222,7 +222,7 @@ class _LogopedaCodigoScreenState extends State<LogopedaCodigoScreen> {
                         label: Text(
                             _codigo != null ? 'Regenerar código' : 'Generar código'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F6E56),
+                          backgroundColor: const Color(0xFF1CE7B2),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),

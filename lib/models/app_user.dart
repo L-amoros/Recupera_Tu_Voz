@@ -6,8 +6,8 @@ class AppUser {
   final String? picture;
   final bool    hasVoice;
   final int     numReferences;
-  final String? role;          // "patient" | "logopeda" | null
-  final bool    roleSet;       // false = primer login → mostrar RoleSelectionScreen
+  final String? role;
+  final bool    roleSet;
   final String? logopedaId;
   final String? logopedaName;
 
@@ -73,14 +73,16 @@ class AppUser {
 
   // ── copyWith ───────────────────────────────────────────────────
 
+  static const _clear = Object();
+
   AppUser copyWith({
     bool?   hasVoice,
     String? name,
     int?    numReferences,
     String? role,
     bool?   roleSet,
-    String? logopedaId,
-    String? logopedaName,
+    Object? logopedaId   = _clear,
+    Object? logopedaName = _clear,
   }) => AppUser(
     token:         token,
     userId:        userId,
@@ -91,7 +93,7 @@ class AppUser {
     numReferences: numReferences ?? this.numReferences,
     role:          role          ?? this.role,
     roleSet:       roleSet       ?? this.roleSet,
-    logopedaId:    logopedaId   ?? this.logopedaId,
-    logopedaName:  logopedaName ?? this.logopedaName,
+    logopedaId:    identical(logopedaId,   _clear) ? this.logopedaId   : logopedaId   as String?,
+    logopedaName:  identical(logopedaName, _clear) ? this.logopedaName : logopedaName as String?,
   );
 }

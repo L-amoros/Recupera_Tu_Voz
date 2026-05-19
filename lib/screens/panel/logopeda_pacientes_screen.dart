@@ -46,7 +46,11 @@ class _LogopedaPacientesScreenState extends State<LogopedaPacientesScreen> {
         ),
       ),
     );
-    if (updated != null && mounted) {
+    if (!mounted) return;
+    if (updated == null) {
+      // Paciente desvinculado: eliminar de la lista
+      setState(() => _pacientes.removeWhere((x) => x.userId == p.userId));
+    } else {
       setState(() {
         final idx = _pacientes.indexWhere((x) => x.userId == updated.userId);
         if (idx != -1) _pacientes[idx] = updated;
@@ -409,9 +413,59 @@ class _PacienteDetalleScreenState extends State<_PacienteDetalleScreen> {
                   : const Text('Guardar cambios', style: TextStyle(fontSize: 15)),
             ),
           ],
+
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _confirmarDesvincular,
+            icon: Icon(Icons.link_off_rounded, color: c.warn, size: 18),
+            label: Text('Desvincular paciente', style: TextStyle(color: c.warn)),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: c.warn.withValues(alpha: 0.5)),
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmarDesvincular() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: c.surface,
+        title: Text('Desvincular paciente', style: TextStyle(color: c.textPrimary)),
+        content: Text(
+          '¿Seguro que quieres desvincular a ${_p.name.isNotEmpty ? _p.name : "este paciente"}? '
+              'Dejará de aparecer en tu lista de pacientes.',
+          style: TextStyle(color: c.textMid),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar', style: TextStyle(color: c.textDim)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Desvincular', style: TextStyle(color: c.warn, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await RolesService(widget.token).desvincularPaciente(_p.userId);
+      if (mounted) Navigator.of(context).pop(null); // null = eliminado de la lista
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: c.warn),
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime dt) {

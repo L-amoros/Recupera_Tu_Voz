@@ -445,6 +445,18 @@ class _NuevaFichaSheetState extends State<_NuevaFichaSheet> {
     super.dispose();
   }
 
+  void _cargarEjemplo() {
+    setState(() {
+      _nameCtrl.text = 'Vocales básicas';
+      _instrCtrl.text = 'Pronuncia cada vocal claramente, con calma y buena resonancia.';
+      _level = 1;
+      _threshold = 0.7;
+      _words
+        ..clear()
+        ..addAll(['A', 'E', 'I', 'O', 'U', 'AEI', 'OUA']);
+    });
+  }
+
   void _addWord() {
     final w = _wordCtrl.text.trim();
     if (w.isEmpty) return;
@@ -497,8 +509,19 @@ class _NuevaFichaSheetState extends State<_NuevaFichaSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Nueva ficha',
-                  style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Nueva ficha',
+                      style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
+                  TextButton.icon(
+                    onPressed: _cargarEjemplo,
+                    icon: Icon(Icons.auto_awesome_rounded, size: 16, color: c.accent),
+                    label: Text('Ejemplo', style: TextStyle(color: c.accent, fontSize: 13)),
+                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
 
               _Label('Nombre', c),

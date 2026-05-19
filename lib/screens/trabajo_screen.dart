@@ -414,7 +414,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
     }
   }
 
-  /// MEJORA-1: saltar la palabra actual (score 0)
   void _saltarPalabra() {
     _results.add(_WordResult(
         word: widget.ficha.words[_wordIndex], score: 0, passed: false, saltada: true));
@@ -613,7 +612,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
   }
 }
 
-// ── MEJORA-2: Feedback visual con gauge circular ──────────────────
 
 class _FeedbackVisual extends StatelessWidget {
   final String feedback;
@@ -653,8 +651,6 @@ class _FeedbackVisual extends StatelessWidget {
     ]);
   }
 }
-
-// ── MEJORA-4: Pantalla de resultados ─────────────────────────────
 
 class _ResultadosScreen extends StatelessWidget {
   final FichaAsignada ficha;
@@ -761,8 +757,6 @@ class _ResultadosScreen extends StatelessWidget {
 
             FilledButton(
               onPressed: () {
-                Navigator.of(context).popUntil(
-                        (route) => route.isFirst || route.settings.name == '/trabajo');
                 Navigator.of(context).pop(fichaActualizada);
               },
               style: FilledButton.styleFrom(

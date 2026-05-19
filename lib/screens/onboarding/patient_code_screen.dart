@@ -50,6 +50,7 @@ class _PatientCodeScreenState extends State<PatientCodeScreen> {
       );
 
       if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
       widget.onLinked(updated);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));

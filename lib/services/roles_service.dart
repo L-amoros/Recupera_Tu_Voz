@@ -90,7 +90,7 @@ class FichaAsignada {
     bestScore: (j['best_score'] as num?)?.toDouble(),
   );
 
-  bool get completada => completedAt != null;
+  bool get completada => completedAt != null && (bestScore == null || bestScore! >= successThreshold);
 
   FichaAsignada copyWith({DateTime? completedAt, double? bestScore}) => FichaAsignada(
     fichaId:          fichaId,
@@ -228,5 +228,27 @@ class RolesService {
       throw Exception(err['detail'] ?? 'Error al completar la ficha');
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
+  /// El logopeda desvincula a un paciente de su lista.
+  Future<void> desvincularPaciente(String userId) async {
+    final r = await http
+        .delete(Uri.parse('$kServerUrl/roles/desvincular-paciente/$userId'), headers: _headers)
+        .timeout(const Duration(seconds: 10));
+    if (r.statusCode != 200) {
+      final err = jsonDecode(r.body);
+      throw Exception(err['detail'] ?? 'Error al desvincular paciente');
+    }
+  }
+
+  /// El paciente se desvincula de su logopeda.
+  Future<void> desvincularme() async {
+    final r = await http
+        .delete(Uri.parse('$kServerUrl/roles/desvincularme'), headers: _headers)
+        .timeout(const Duration(seconds: 10));
+    if (r.statusCode != 200) {
+      final err = jsonDecode(r.body);
+      throw Exception(err['detail'] ?? 'Error al desvincularse');
+    }
   }
 }

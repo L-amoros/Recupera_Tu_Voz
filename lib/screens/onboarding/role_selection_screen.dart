@@ -48,7 +48,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   }
 
   void _choosePatient() {
-    Navigator.of(context).pushReplacement(MaterialPageRoute(
+    Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => PatientCodeScreen(
         user: widget.user,
         onLinked: widget.onRoleSet,

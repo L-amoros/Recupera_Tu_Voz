@@ -256,6 +256,7 @@ class _AppShellState extends State<AppShell> {
         onSettingsChanged: widget.onSettingsChanged,
         onCloneVoice: () => setState(() => _showCloneVoice = true),
         onLogout: widget.onLogout,
+        onUserChanged: widget.onUserChanged,
       ),
     ];
 
