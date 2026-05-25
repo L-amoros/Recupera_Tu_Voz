@@ -1,7 +1,4 @@
-// TODO Implement this library.// lib/screens/onboarding/role_selection_screen.dart
-//
-// Aparece una sola vez: cuando role_set=false justo después del login.
-// El usuario elige "Soy logopeda" o "Soy paciente".
+// lib/screens/onboarding/role_selection_screen.dart
 
 import 'package:flutter/material.dart';
 import '../../models/app_user.dart';
@@ -10,7 +7,6 @@ import 'patient_code_screen.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
   final AppUser user;
-  /// Callback que se llama cuando el rol queda establecido
   final void Function(AppUser updatedUser) onRoleSet;
 
   const RoleSelectionScreen({
@@ -60,7 +56,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,14 +77,13 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     .bodyMedium
                     ?.copyWith(color: Colors.grey.shade600),
               ),
-              const Spacer(),
+              const SizedBox(height: 48),
               _RoleCard(
                 icon: Icons.medical_services_outlined,
                 color: const Color(0xFF0F6E56),
                 backgroundColor: const Color(0xFFE1F5EE),
                 title: 'Soy logopeda',
-                subtitle:
-                'Gestiono pacientes, fichas y seguimiento del progreso.',
+                subtitle: 'Gestiono pacientes, fichas y seguimiento del progreso.',
                 onTap: _loading ? null : _chooseLogopeda,
               ),
               const SizedBox(height: 16),
@@ -97,21 +92,17 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 color: const Color(0xFF185FA5),
                 backgroundColor: const Color(0xFFE6F1FB),
                 title: 'Soy paciente',
-                subtitle:
-                'Hago ejercicios de voz y sigo mi rehabilitación.',
+                subtitle: 'Hago ejercicios de voz y sigo mi rehabilitación.',
                 onTap: _loading ? null : _choosePatient,
               ),
-              const Spacer(),
+              const SizedBox(height: 48),
               if (_loading)
                 const Center(child: CircularProgressIndicator()),
               const SizedBox(height: 12),
               Center(
                 child: Text(
                   'Esta selección no se puede cambiar después.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                 ),
               ),
             ],

@@ -162,15 +162,13 @@ class _FichaTile extends StatelessWidget {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(ficha.name, style: TextStyle(color: c.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Row(children: [
+            // FIX: Wrap evita overflow cuando hay muchos chips
+            Wrap(spacing: 6, runSpacing: 4, children: [
               _MiniChip('Nv. ${ficha.level}', c.accent),
-              const SizedBox(width: 6),
               _MiniChip('${ficha.words.length} palabras', c.textDim),
-              if (ficha.bestScore != null) ...[
-                const SizedBox(width: 6),
+              if (ficha.bestScore != null)
                 _MiniChip('${(ficha.bestScore! * 100).round()}%',
                     ficha.bestScore! >= ficha.successThreshold ? c.teal : c.gold),
-              ],
             ]),
             const SizedBox(height: 4),
             Text('Asignada el ${_fmt(ficha.assignedAt)}',
@@ -202,11 +200,10 @@ class _FichaDetalleScreen extends StatelessWidget {
       backgroundColor: c.bg,
       appBar: AppBar(title: Text(ficha.name)),
       body: ListView(padding: const EdgeInsets.all(20), children: [
-        Row(children: [
+        // FIX: Wrap en vez de Row para que los chips no se salgan por la derecha
+        Wrap(spacing: 8, runSpacing: 8, children: [
           _InfoChip(icon: Icons.bar_chart_rounded, label: 'Nivel ${ficha.level}', color: c.accent),
-          const SizedBox(width: 8),
           _InfoChip(icon: Icons.list_alt_rounded, label: '${ficha.words.length} palabras', color: c.textMid),
-          const SizedBox(width: 8),
           _InfoChip(icon: Icons.flag_rounded, label: '${(ficha.successThreshold * 100).round()}% mín.', color: c.gold),
         ]),
         const SizedBox(height: 20),
@@ -326,7 +323,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
     _abrirSesion();
   }
 
-  /// BUG-2 FIX: cierre silencioso si el usuario sale sin terminar
   @override
   void dispose() {
     if (_sessionId != null) {
@@ -391,7 +387,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
       )
         ..headers['Authorization'] = 'Bearer ${widget.token}'
         ..fields['word'] = word
-      // BUG-3 FIX: nombre explícito para iOS
         ..files.add(await http.MultipartFile.fromPath('audio', path, filename: 'intento.wav'));
 
       final streamed = await request.send().timeout(const Duration(seconds: 60));
@@ -447,7 +442,7 @@ class _PracticarScreenState extends State<_PracticarScreen> {
           Uri.parse('$kServerUrl/exercises/sesiones/$_sessionId/cerrar'),
           headers: _h)
           .timeout(const Duration(seconds: 10));
-      _sessionId = null; // evita doble cierre en dispose()
+      _sessionId = null;
     } catch (_) {}
 
     final intentosReales = _results.where((r) => !r.saltada).toList();
@@ -469,7 +464,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
     if (mounted) {
       setState(() => _loading = false);
       final superada = bestScore != null && bestScore >= widget.ficha.successThreshold;
-      // MEJORA-4: pantalla de resultados
       await Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => _ResultadosScreen(
           ficha: widget.ficha,
@@ -499,119 +493,130 @@ class _PracticarScreenState extends State<_PracticarScreen> {
           ),
         ],
       ),
-      body: _loading && _sessionId == null
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.error_outline_rounded, color: c.warn, size: 48),
-          const SizedBox(height: 12),
-          Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: c.textPrimary)),
-          const SizedBox(height: 16),
-          OutlinedButton(onPressed: _abrirSesion, child: const Text('Reintentar')),
-        ],
-      )))
-          : Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(children: [
-          LinearProgressIndicator(
-            value: (_wordIndex + 1) / words.length,
-            backgroundColor: c.border,
-            valueColor: AlwaysStoppedAnimation(c.accent),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          const SizedBox(height: 8),
-          Text('Palabra ${_wordIndex + 1} de ${words.length}',
-              style: TextStyle(color: c.textDim, fontSize: 12)),
-          const Spacer(),
-
-          // MEJORA-3: AnimatedSwitcher con fade entre palabras
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-            child: Text(
-              word,
-              key: ValueKey(word),
-              style: TextStyle(color: c.textPrimary, fontSize: 48,
-                  fontWeight: FontWeight.w800, letterSpacing: 2),
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // MEJORA-2: feedback visual con gauge
-          if (_feedback != null && !_loading) ...[
-            _FeedbackVisual(feedback: _feedback!, score: _lastScore, c: c),
-            const SizedBox(height: 24),
-          ],
-
-          if (!_loading) ...[
-            GestureDetector(
-              onTap: _recording ? _detenerYEnviar : _grabar,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 88, height: 88,
-                decoration: BoxDecoration(
-                  color: _recording
-                      ? c.warn.withValues(alpha: 0.15)
-                      : c.accent.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: _recording ? c.warn : c.accent, width: 2.5),
-                ),
-                child: Icon(_recording ? Icons.stop_rounded : Icons.mic_rounded,
-                    color: _recording ? c.warn : c.accent, size: 40),
-              ),
-            ),
+      // FIX: SafeArea + SingleChildScrollView evitan el overflow en pantallas pequeñas
+      body: SafeArea(
+        child: _loading && _sessionId == null
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline_rounded, color: c.warn, size: 48),
             const SizedBox(height: 12),
-            Text(
-              _recording ? 'Grabando… toca para parar'
-                  : _feedback != null ? 'Graba de nuevo o continúa' : 'Toca para grabar',
-              style: TextStyle(color: c.textDim, fontSize: 13),
-            ),
-          ] else ...[
-            const CircularProgressIndicator(),
-            const SizedBox(height: 12),
-            Text('Evaluando…', style: TextStyle(color: c.textDim, fontSize: 13)),
+            Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: c.textPrimary)),
+            const SizedBox(height: 16),
+            OutlinedButton(onPressed: _abrirSesion, child: const Text('Reintentar')),
           ],
-
-          const Spacer(),
-
-          // Botones inferiores
-          if (!_loading && !_recording)
-            Row(children: [
-              // MEJORA-1: botón Saltar
-              OutlinedButton(
-                onPressed: _saltarPalabra,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: c.textDim,
-                  side: BorderSide(color: c.border),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        )))
+            : SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height
+                  - AppBar().preferredSize.height
+                  - MediaQuery.of(context).padding.top
+                  - MediaQuery.of(context).padding.bottom
+                  - 40,
+            ),
+            child: IntrinsicHeight(
+              child: Column(children: [
+                LinearProgressIndicator(
+                  value: (_wordIndex + 1) / words.length,
+                  backgroundColor: c.border,
+                  valueColor: AlwaysStoppedAnimation(c.accent),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('Saltar'),
-              ),
-              if (_feedback != null) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _siguiente,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: c.accent, foregroundColor: c.bg,
-                      minimumSize: const Size(double.infinity, 52),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: Text(isLast ? 'Finalizar ficha' : 'Siguiente palabra',
-                        style: const TextStyle(fontSize: 15)),
+                const SizedBox(height: 6),
+                Text('Palabra ${_wordIndex + 1} de ${words.length}',
+                    style: TextStyle(color: c.textDim, fontSize: 12)),
+                const SizedBox(height: 24),
+
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+                  child: Text(
+                    word,
+                    key: ValueKey(word),
+                    style: TextStyle(color: c.textPrimary, fontSize: 44,
+                        fontWeight: FontWeight.w800, letterSpacing: 2),
                   ),
                 ),
-              ],
-            ]),
-        ]),
+                const SizedBox(height: 24),
+
+                if (_feedback != null && !_loading) ...[
+                  _FeedbackVisual(feedback: _feedback!, score: _lastScore, c: c),
+                  const SizedBox(height: 20),
+                ],
+
+                if (!_loading) ...[
+                  GestureDetector(
+                    onTap: _recording ? _detenerYEnviar : _grabar,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 80, height: 80,
+                      decoration: BoxDecoration(
+                        color: _recording
+                            ? c.warn.withValues(alpha: 0.15)
+                            : c.accent.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _recording ? c.warn : c.accent, width: 2.5),
+                      ),
+                      child: Icon(_recording ? Icons.stop_rounded : Icons.mic_rounded,
+                          color: _recording ? c.warn : c.accent, size: 36),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _recording ? 'Grabando… toca para parar'
+                        : _feedback != null ? 'Graba de nuevo o continúa' : 'Toca para grabar',
+                    style: TextStyle(color: c.textDim, fontSize: 13),
+                  ),
+                ] else ...[
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 10),
+                  Text('Evaluando…', style: TextStyle(color: c.textDim, fontSize: 13)),
+                ],
+
+                const Spacer(),
+
+                if (!_loading && !_recording)
+                  Row(children: [
+                    OutlinedButton(
+                      onPressed: _saltarPalabra,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: c.textDim,
+                        side: BorderSide(color: c.border),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text('Saltar'),
+                    ),
+                    if (_feedback != null) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _siguiente,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: c.accent, foregroundColor: c.bg,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: Text(isLast ? 'Finalizar ficha' : 'Siguiente palabra',
+                              style: const TextStyle(fontSize: 15)),
+                        ),
+                      ),
+                    ],
+                  ]),
+              ]),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
+// ── Feedback visual con gauge circular ────────────────────────────
 
 class _FeedbackVisual extends StatelessWidget {
   final String feedback;
@@ -629,19 +634,18 @@ class _FeedbackVisual extends StatelessWidget {
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
       if (score != null) ...[
-        SizedBox(width: 80, height: 80,
-          child: Stack(alignment: Alignment.center, children: [
-            CircularProgressIndicator(
-              value: score,
-              strokeWidth: 6,
-              backgroundColor: color.withValues(alpha: 0.15),
-              valueColor: AlwaysStoppedAnimation(color),
-            ),
-            Text('${(score! * 100).round()}%',
-                style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w800)),
-          ]),
+        SizedBox(width: 72, height: 72,
+          child: CircularProgressIndicator(
+            value: score,
+            strokeWidth: 5,
+            backgroundColor: color.withValues(alpha: 0.15),
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
+        Text('${(score! * 100).round()}%',
+            style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
       ],
       Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, color: color, size: 20),
@@ -651,6 +655,8 @@ class _FeedbackVisual extends StatelessWidget {
     ]);
   }
 }
+
+// ── Pantalla de resultados ────────────────────────────────────────
 
 class _ResultadosScreen extends StatelessWidget {
   final FichaAsignada ficha;
@@ -674,99 +680,104 @@ class _ResultadosScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: c.bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(children: [
-            const Spacer(),
-            Text(superada ? '🎉' : '💪', style: const TextStyle(fontSize: 64)),
-            const SizedBox(height: 16),
-            Text(superada ? '¡Ficha superada!' : '¡Sesión completada!',
-                style: TextStyle(color: c.textPrimary, fontSize: 24, fontWeight: FontWeight.w800),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            Text(
-              superada
-                  ? 'Has superado el umbral del ${(ficha.successThreshold * 100).round()}%'
-                  : 'Sigue practicando para mejorar tu puntuación',
-              style: TextStyle(color: c.textDim, fontSize: 14, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-
-            // Score global circular
-            if (scoreGlobal != null) ...[
-              SizedBox(width: 120, height: 120,
-                child: Stack(alignment: Alignment.center, children: [
-                  CircularProgressIndicator(
-                    value: scoreGlobal,
-                    strokeWidth: 9,
-                    backgroundColor: color.withValues(alpha: 0.15),
-                    valueColor: AlwaysStoppedAnimation(color),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(28, 32, 28, 0),
+                child: Column(children: [
+                  Text(superada ? '🎉' : '💪', style: const TextStyle(fontSize: 56)),
+                  const SizedBox(height: 12),
+                  Text(superada ? '¡Ficha superada!' : '¡Sesión completada!',
+                      style: TextStyle(color: c.textPrimary, fontSize: 22, fontWeight: FontWeight.w800),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 6),
+                  Text(
+                    superada
+                        ? 'Has superado el umbral del ${(ficha.successThreshold * 100).round()}%'
+                        : 'Sigue practicando para mejorar tu puntuación',
+                    style: TextStyle(color: c.textDim, fontSize: 14, height: 1.5),
+                    textAlign: TextAlign.center,
                   ),
-                  Column(mainAxisSize: MainAxisSize.min, children: [
+                  const SizedBox(height: 24),
+
+                  if (scoreGlobal != null) ...[
+                    SizedBox(width: 80, height: 80,
+                      child: CircularProgressIndicator(
+                        value: scoreGlobal,
+                        strokeWidth: 5,
+                        backgroundColor: color.withValues(alpha: 0.15),
+                        valueColor: AlwaysStoppedAnimation(color),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Text('${(scoreGlobal! * 100).round()}%',
-                        style: TextStyle(color: color, fontSize: 28, fontWeight: FontWeight.w900)),
+                        style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w900)),
                     Text('score', style: TextStyle(color: c.textDim, fontSize: 11)),
+                    const SizedBox(height: 20),
+                  ],
+
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    _StatPill(label: 'Correctas', value: '$correctas/$total', color: c.teal),
+                    const SizedBox(width: 12),
+                    _StatPill(label: 'Saltadas',
+                        value: '${results.where((r) => r.saltada).length}', color: c.textDim),
                   ]),
+                  const SizedBox(height: 20),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: c.border),
+                    ),
+                    constraints: const BoxConstraints(maxHeight: 240),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: results.length,
+                      separatorBuilder: (_, __) => Divider(height: 1, color: c.border.withValues(alpha: 0.5)),
+                      itemBuilder: (_, i) {
+                        final r = results[i];
+                        final rColor = r.saltada ? c.textDim : r.passed ? c.teal : c.warn;
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            r.saltada ? Icons.skip_next_rounded
+                                : r.passed ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                            color: rColor, size: 20,
+                          ),
+                          title: Text(r.word, style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                          trailing: r.saltada
+                              ? Text('—', style: TextStyle(color: c.textDim, fontSize: 13))
+                              : Text('${(r.score * 100).round()}%',
+                              style: TextStyle(color: rColor, fontSize: 13, fontWeight: FontWeight.w700)),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                 ]),
               ),
-              const SizedBox(height: 28),
-            ],
+            ),
 
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              _StatPill(label: 'Correctas', value: '$correctas/$total', color: c.teal),
-              const SizedBox(width: 12),
-              _StatPill(label: 'Saltadas',
-                  value: '${results.where((r) => r.saltada).length}', color: c.textDim),
-            ]),
-            const SizedBox(height: 28),
-
-            // Lista por palabra
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: c.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 0, 28, 20),
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.of(context).popUntil(
+                          (route) => route.isFirst || route.settings.name == '/trabajo');
+                  Navigator.of(context).pop(fichaActualizada);
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: c.accent, foregroundColor: c.bg,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: results.length,
-                  separatorBuilder: (_, __) => Divider(height: 1, color: c.border.withValues(alpha: 0.5)),
-                  itemBuilder: (_, i) {
-                    final r = results[i];
-                    final rColor = r.saltada ? c.textDim : r.passed ? c.teal : c.warn;
-                    return ListTile(
-                      dense: true,
-                      leading: Icon(
-                        r.saltada ? Icons.skip_next_rounded
-                            : r.passed ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                        color: rColor, size: 20,
-                      ),
-                      title: Text(r.word, style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-                      trailing: r.saltada
-                          ? Text('—', style: TextStyle(color: c.textDim, fontSize: 13))
-                          : Text('${(r.score * 100).round()}%',
-                          style: TextStyle(color: rColor, fontSize: 13, fontWeight: FontWeight.w700)),
-                    );
-                  },
-                ),
+                child: const Text('Volver a mis fichas', style: TextStyle(fontSize: 15)),
               ),
             ),
-            const SizedBox(height: 24),
-
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop(fichaActualizada);
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: c.accent, foregroundColor: c.bg,
-                minimumSize: const Size(double.infinity, 52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const Text('Volver a mis fichas', style: TextStyle(fontSize: 15)),
-            ),
-          ]),
+          ],
         ),
       ),
     );

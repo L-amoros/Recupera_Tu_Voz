@@ -45,30 +45,31 @@ class _LogopedaShellState extends State<LogopedaShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
+        indicatorColor: const Color(0xFF1CE7B2).withValues(alpha: 0.2),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.people_outline_rounded),
-            selectedIcon: Icon(Icons.people_rounded),
+            selectedIcon: Icon(Icons.people_rounded, color: Color(0xFF1CE7B2)),
             label: 'Pacientes',
           ),
           NavigationDestination(
             icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment_rounded),
+            selectedIcon: Icon(Icons.assignment_rounded, color: Color(0xFF1CE7B2)),
             label: 'Fichas',
           ),
           NavigationDestination(
             icon: Icon(Icons.video_library_outlined),
-            selectedIcon: Icon(Icons.video_library_rounded),
+            selectedIcon: Icon(Icons.video_library_rounded, color: Color(0xFF1CE7B2)),
             label: 'Vídeos',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart_rounded),
+            selectedIcon: Icon(Icons.bar_chart_rounded, color: Color(0xFF1CE7B2)),
             label: 'Resumen',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
+            selectedIcon: Icon(Icons.person_rounded, color: Color(0xFF1CE7B2)),
             label: 'Perfil',
           ),
         ],
@@ -118,7 +119,6 @@ class _LogopedaPerfilScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // ── Cabecera ─────────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -163,7 +163,6 @@ class _LogopedaPerfilScreen extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // ── Cerrar sesión ────────────────────────────────────
           GestureDetector(
             onTap: () => _confirmLogout(context),
             child: Container(

@@ -265,6 +265,9 @@ class _AppShellState extends State<AppShell> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _tabIndex,
         onTap: _goToTab,
+        selectedItemColor: const Color(0xFF1CE7B2),
+        unselectedItemColor: const Color(0x61FFFFFF),
+        backgroundColor: const Color(0xFF12121F),
         items: const [
           BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
