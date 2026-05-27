@@ -62,6 +62,7 @@ class _PatientCodeScreenState extends State<PatientCodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Vincular con logopeda'),
         backgroundColor: Colors.transparent,
@@ -69,7 +70,7 @@ class _PatientCodeScreenState extends State<PatientCodeScreen> {
         foregroundColor: Colors.black87,
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,7 +135,7 @@ class _PatientCodeScreenState extends State<PatientCodeScreen> {
                 ),
               ],
 
-              const Spacer(),
+              const SizedBox(height: 32),
 
               SizedBox(
                 width: double.infinity,

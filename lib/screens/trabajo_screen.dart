@@ -277,13 +277,10 @@ class _FichaDetalleScreen extends StatelessWidget {
     );
   }
 
-  void _iniciarPractica(BuildContext context) async {
-    final result = await Navigator.of(context).push<FichaAsignada>(
+  void _iniciarPractica(BuildContext context) {
+    Navigator.of(context).push<FichaAsignada>(
       MaterialPageRoute(builder: (_) => _PracticarScreen(ficha: ficha, token: token)),
     );
-    if (result != null && context.mounted) {
-      Navigator.of(context).pop(result);
-    }
   }
 }
 
@@ -326,7 +323,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
     _abrirSesion();
   }
 
-  /// BUG-2 FIX: cierre silencioso si el usuario sale sin terminar
   @override
   void dispose() {
     if (_sessionId != null) {
@@ -366,8 +362,10 @@ class _PracticarScreenState extends State<_PracticarScreen> {
     if (_sessionId == null || _recording) return;
     final hasPermission = await _recorder.hasPermission();
     if (!hasPermission) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Permiso de micrófono denegado')));
+      }
       return;
     }
     setState(() { _recording = true; _feedback = null; _lastScore = null; });
@@ -757,7 +755,9 @@ class _ResultadosScreen extends StatelessWidget {
 
             FilledButton(
               onPressed: () {
-                Navigator.of(context).pop(fichaActualizada);
+                final nav = Navigator.of(context);
+                nav.pop(fichaActualizada); // cierra _ResultadosScreen
+                nav.pop(fichaActualizada); // cierra _FichaDetalleScreen → vuelve a TrabajoScreen
               },
               style: FilledButton.styleFrom(
                 backgroundColor: c.accent, foregroundColor: c.bg,

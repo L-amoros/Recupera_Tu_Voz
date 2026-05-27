@@ -99,13 +99,12 @@ class _TextScreenState extends State<TextScreen> {
         speed: (_velocidad + 0.5).clamp(0.5, 2.0),
       );
       final dir = await getTemporaryDirectory();
-      final _cleaned = text
+      final cleaned = text
           .replaceAll(RegExp(r'[^\w\s]'), '')
           .trim()
           .replaceAll(' ', '_');
-      final safeNombre = _cleaned.substring(0, _cleaned.length.clamp(0, 30));
+      final safeNombre = cleaned.substring(0, cleaned.length.clamp(0, 30));
 
-      // WAV — el backend ya no devuelve MP3
       final file = File('${dir.path}/voz_$safeNombre.wav');
       await file.writeAsBytes(bytes);
 
@@ -147,102 +146,97 @@ class _TextScreenState extends State<TextScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SectionLabel('Lo que quieres decir'),
-              const SizedBox(height: 8),
-              Container(
-                height: 170,
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: c.border),
-                ),
-                child: TextField(
-                  controller: _controller,
-                  maxLines: null,
-                  expands: true,
-                  textAlignVertical: TextAlignVertical.top,
-                  style: TextStyle(color: c.textPrimary, fontSize: 16, height: 1.5),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.all(14),
-                    hintText: 'Escribe aquí...',
-                    hintStyle: TextStyle(color: c.textDim, fontSize: 16),
-                  ),
+      // El body es scrollable para que el teclado no cause overflow
+      body: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionLabel('Lo que quieres decir'),
+            const SizedBox(height: 8),
+            Container(
+              height: 170,
+              decoration: BoxDecoration(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: c.border),
+              ),
+              child: TextField(
+                controller: _controller,
+                maxLines: null,
+                expands: true,
+                textAlignVertical: TextAlignVertical.top,
+                style: TextStyle(color: c.textPrimary, fontSize: 16, height: 1.5),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(14),
+                  hintText: 'Escribe aquí...',
+                  hintStyle: TextStyle(color: c.textDim, fontSize: 16),
                 ),
               ),
-              const SizedBox(height: 14),
-              _ControlsToggle(
-                open: _showControls,
+            ),
+            const SizedBox(height: 14),
+            _ControlsToggle(
+              open: _showControls,
+              emocion: _emocion,
+              onTap: () => setState(() => _showControls = !_showControls),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: _showControls
+                  ? _ControlPanel(
+                velocidad: _velocidad,
+                volumen: _volumen,
                 emocion: _emocion,
-                onTap: () => setState(() => _showControls = !_showControls),
-              ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                child: _showControls
-                    ? _ControlPanel(
-                  velocidad: _velocidad,
-                  volumen: _volumen,
-                  emocion: _emocion,
-                  showVelocidad: !usingClonedVoice,
-                  onVelocidadChanged: (v) => setState(() => _velocidad = v),
-                  onVolumenChanged: (v) => setState(() => _volumen = v),
-                  onEmocionChanged: (e) => setState(() => _emocion = e),
-                )
-                    : const SizedBox.shrink(),
-              ),
-              const Spacer(),
-              // Mensaje de progreso cuando hay voz clonada (puede tardar)
-              if (_isSpeaking && usingClonedVoice)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 12, height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 1.5,
-                          color: c.accent.withValues(alpha: 0.7),
-                        ),
+                showVelocidad: !usingClonedVoice,
+                onVelocidadChanged: (v) => setState(() => _velocidad = v),
+                onVolumenChanged: (v) => setState(() => _volumen = v),
+                onEmocionChanged: (e) => setState(() => _emocion = e),
+              )
+                  : const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 32),
+            if (_isSpeaking && usingClonedVoice)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: c.accent.withValues(alpha: 0.7),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Sintetizando con tu voz... puede tardar hasta 60s',
-                        style: TextStyle(
-                          color: c.textDim,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SpeakButton(
-                    isSpeaking: _isSpeaking,
-                    isLoading: _isLoading,
-                    onTap: _speak,
-                  ),
-                  if (usingClonedVoice) ...[
-                    const SizedBox(width: 16),
-                    _ShareAudioButton(
-                      isSharing: _isSharing,
-                      onTap: _compartir,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Sintetizando con tu voz... puede tardar hasta 60s',
+                      style: TextStyle(color: c.textDim, fontSize: 12),
                     ),
                   ],
-                ],
+                ),
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SpeakButton(
+                  isSpeaking: _isSpeaking,
+                  isLoading: _isLoading,
+                  onTap: _speak,
+                ),
+                if (usingClonedVoice) ...[
+                  const SizedBox(width: 16),
+                  _ShareAudioButton(
+                    isSharing: _isSharing,
+                    onTap: _compartir,
+                  ),
+                ],
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -283,7 +277,6 @@ class _ControlsToggle extends StatelessWidget {
   }
 }
 
-// ── Control panel ────────────────────────────────────────────────
 class _ControlPanel extends StatelessWidget {
   final double velocidad, volumen;
   final VozEmocion emocion;
@@ -313,18 +306,12 @@ class _ControlPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showVelocidad) ...[
-            _SliderRow(
-              label: 'Velocidad',
-              value: velocidad,
-              onChanged: onVelocidadChanged,
-            ),
+            _SliderRow(label: 'Velocidad', value: velocidad, onChanged: onVelocidadChanged),
             const SizedBox(height: 4),
           ],
           _SliderRow(label: 'Volumen', value: volumen, onChanged: onVolumenChanged),
           const SizedBox(height: 10),
-          Text('Emoción',
-              style: TextStyle(color: c.textMid, fontSize: 12)),
-          const SizedBox(height: 6),
+          Text('Emoción', style: TextStyle(color: c.textMid, fontSize: 12)),
           const SizedBox(height: 6),
           ChipRow(
             options: VozEmocion.values.map((e) => e.label).toList(),
@@ -353,8 +340,7 @@ class _SliderRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 72,
-          child: Text(label,
-              style: TextStyle(color: c.textMid, fontSize: 12)),
+          child: Text(label, style: TextStyle(color: c.textMid, fontSize: 12)),
         ),
         Expanded(
           child: Slider(
@@ -382,17 +368,12 @@ class _ShareAudioButton extends StatelessWidget {
       onTap: isSharing ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 56,
-        height: 56,
+        width: 56, height: 56,
         decoration: BoxDecoration(
-          color: isSharing
-              ? c.accent.withValues(alpha: 0.08)
-              : c.surface,
+          color: isSharing ? c.accent.withValues(alpha: 0.08) : c.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSharing
-                ? c.accent.withValues(alpha: 0.5)
-                : c.border,
+            color: isSharing ? c.accent.withValues(alpha: 0.5) : c.border,
             width: 1.5,
           ),
         ),
@@ -405,11 +386,7 @@ class _ShareAudioButton extends StatelessWidget {
               color: c.accent.withValues(alpha: 0.7),
             ),
           )
-              : Icon(
-            Icons.send_rounded,
-            size: 22,
-            color: c.accent,
-          ),
+              : Icon(Icons.send_rounded, size: 22, color: c.accent),
         ),
       ),
     );
@@ -426,12 +403,9 @@ class _VoiceEngineBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: usingClonedVoice
-            ? c.teal.withValues(alpha: 0.12)
-            : c.surface,
+        color: usingClonedVoice ? c.teal.withValues(alpha: 0.12) : c.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color: usingClonedVoice ? c.teal : c.border),
+        border: Border.all(color: usingClonedVoice ? c.teal : c.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

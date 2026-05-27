@@ -9,13 +9,9 @@ class CloneVoiceScreen extends StatefulWidget {
   final bool alreadyHasVoice;
   final int initialNumReferences;
 
-  /// Sube archivos en modo ACUMULATIVO (usa /upload uno a uno).
-  /// Devuelve cuántos quedaron guardados en total.
   final Future<int> Function(List<({Uint8List bytes, String filename})> files)
   onUploadAdd;
 
-  /// Sube archivos REEMPLAZANDO todo (usa /upload-multiple con borrado previo).
-  /// Devuelve cuántos quedaron guardados en total.
   final Future<int> Function(List<({Uint8List bytes, String filename})> files)
   onUploadReplace;
 
@@ -126,7 +122,6 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ── Pantalla de grabación integrada ────────────────────────────
     if (_showRecorder) {
       return RecordVoiceScreen(
         currentRefs: _numRefs,
@@ -148,7 +143,6 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
       );
     }
 
-    // ── Vista normal ───────────────────────────────────────────────
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
@@ -158,12 +152,11 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
           onPressed: widget.onDone,
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Estado ──────────────────────────────────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -263,7 +256,6 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                 child: Text(_success!, style: TextStyle(color: c.teal, fontSize: 13)),
               ),
 
-            // ── Grabar desde la app (NUEVO) ──────────────────────
             _BigButton(
               label: 'Grabar mi voz ahora',
               icon: Icons.mic_rounded,
@@ -275,10 +267,8 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                 _success = null;
               }),
             ),
-
             const SizedBox(height: 12),
 
-            // ── Subir fichero ────────────────────────────────────
             _BigButton(
               label: _hasVoice
                   ? 'Reemplazar todo (subir fichero)'
@@ -290,7 +280,6 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               outline: _hasVoice,
             ),
 
-            // ── Añadir más (solo si hay hueco) ───────────────────
             if (_hasVoice && _numRefs < _maxRefs) ...[
               const SizedBox(height: 12),
               _BigButton(
@@ -316,7 +305,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
               ),
             ],
 
-            const Spacer(),
+            const SizedBox(height: 16),
             if (_hasVoice)
               Center(
                 child: TextButton(
@@ -325,6 +314,7 @@ class _CloneVoiceScreenState extends State<CloneVoiceScreen> {
                       style: TextStyle(color: c.accent, fontSize: 15)),
                 ),
               ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -372,11 +362,17 @@ class _BigButton extends StatelessWidget {
             children: [
               Icon(icon, color: outline ? color : Colors.white, size: 18),
               const SizedBox(width: 8),
-              Text(label,
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                   style: TextStyle(
                       color: outline ? color : Colors.white,
                       fontSize: 15,
-                      fontWeight: FontWeight.w700)),
+                      fontWeight: FontWeight.w700),
+                ),
+              ),
             ],
           ),
         ),

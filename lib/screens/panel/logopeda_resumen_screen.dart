@@ -60,7 +60,6 @@ class _LogopedaResumenScreenState extends State<LogopedaResumenScreen> {
         'Authorization': 'Bearer ${widget.user.token}',
         'Content-Type': 'application/json',
       };
-      // Cargamos pacientes y stats de fichas en paralelo
       final results = await Future.wait([
         RolesService(widget.user.token).getMisPacientes(),
         http.get(Uri.parse('$kServerUrl/fichas/stats'), headers: headers)
@@ -133,15 +132,14 @@ class _LogopedaResumenScreenState extends State<LogopedaResumenScreen> {
       );
     }
 
-    // ── Estadísticas globales ─────────────────────────────────────
-    final total       = _pacientes.length;
-    final conVoz      = _pacientes.where((p) => p.hasVoice).length;
-    final mediaRacha  = _pacientes.isEmpty ? 0.0
+    final total      = _pacientes.length;
+    final conVoz     = _pacientes.where((p) => p.hasVoice).length;
+    final mediaRacha = _pacientes.isEmpty ? 0.0
         : _pacientes.map((p) => p.streakDays).reduce((a, b) => a + b) / total;
-    final mediaLevel  = _pacientes.isEmpty ? 0.0
+    final mediaLevel = _pacientes.isEmpty ? 0.0
         : _pacientes.map((p) => p.currentLevel).reduce((a, b) => a + b) / total;
-    final sinTipoVoz  = _pacientes.where((p) => p.voiceType == null).length;
-    final fs          = _fichasStats;
+    final sinTipoVoz = _pacientes.where((p) => p.voiceType == null).length;
+    final fs         = _fichasStats;
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -150,91 +148,48 @@ class _LogopedaResumenScreenState extends State<LogopedaResumenScreen> {
         padding: const EdgeInsets.all(16),
         children: [
 
-          // ── Cards de resumen — pacientes ──────────────────────
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.4,
-            children: [
-              _StatCard(
-                icon: Icons.people_rounded,
-                label: 'Pacientes',
-                value: '$total',
-                color: c.accent,
-              ),
-              _StatCard(
-                icon: Icons.graphic_eq_rounded,
-                label: 'Con voz clonada',
-                value: '$conVoz / $total',
-                color: c.teal,
-              ),
-              _StatCard(
-                icon: Icons.local_fire_department_rounded,
-                label: 'Racha media',
-                value: '${mediaRacha.toStringAsFixed(1)}d',
-                color: c.gold,
-              ),
-              _StatCard(
-                icon: Icons.bar_chart_rounded,
-                label: 'Nivel medio',
-                value: mediaLevel.toStringAsFixed(1),
-                color: c.purple,
-              ),
-            ],
-          ),
+          // Fila 1 pacientes
+          Row(children: [
+            Expanded(child: _StatCard(icon: Icons.people_rounded, label: 'Pacientes', value: '$total', color: c.accent)),
+            const SizedBox(width: 10),
+            Expanded(child: _StatCard(icon: Icons.graphic_eq_rounded, label: 'Con voz clonada', value: '$conVoz / $total', color: c.teal)),
+          ]),
+          const SizedBox(height: 10),
+          // Fila 2 pacientes
+          Row(children: [
+            Expanded(child: _StatCard(icon: Icons.local_fire_department_rounded, label: 'Racha media', value: '${mediaRacha.toStringAsFixed(1)}d', color: c.gold)),
+            const SizedBox(width: 10),
+            Expanded(child: _StatCard(icon: Icons.bar_chart_rounded, label: 'Nivel medio', value: mediaLevel.toStringAsFixed(1), color: c.purple)),
+          ]),
 
-          // ── Cards de fichas (si hay datos del endpoint) ───────
           if (fs != null) ...[
             const SizedBox(height: 16),
             Text('Fichas de trabajo',
-                style: TextStyle(color: c.textMid, fontSize: 12,
-                    fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+                style: TextStyle(color: c.textMid, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
             const SizedBox(height: 10),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.4,
-              children: [
-                _StatCard(
-                  icon: Icons.assignment_rounded,
-                  label: 'Fichas creadas',
-                  value: '${fs.totalFichas}',
-                  color: c.accent,
-                ),
-                _StatCard(
-                  icon: Icons.check_circle_rounded,
-                  label: 'Completadas',
-                  value: '${fs.totalCompletadas} / ${fs.totalAsignaciones}',
-                  color: c.teal,
-                ),
-                _StatCard(
-                  icon: Icons.percent_rounded,
-                  label: 'Tasa completado',
-                  value: '${(fs.tasaCompletado * 100).round()}%',
-                  color: c.gold,
-                ),
-                _StatCard(
-                  icon: Icons.emoji_events_rounded,
-                  label: 'Score medio',
-                  value: fs.scoreMedioGlobal != null
-                      ? '${(fs.scoreMedioGlobal! * 100).round()}%'
-                      : '—',
-                  color: c.purple,
-                ),
-              ],
-            ),
-            // Desglose por nivel
+            // Fila 1 fichas
+            Row(children: [
+              Expanded(child: _StatCard(icon: Icons.assignment_rounded, label: 'Fichas creadas', value: '${fs.totalFichas}', color: c.accent)),
+              const SizedBox(width: 10),
+              Expanded(child: _StatCard(icon: Icons.check_circle_rounded, label: 'Completadas', value: '${fs.totalCompletadas} / ${fs.totalAsignaciones}', color: c.teal)),
+            ]),
+            const SizedBox(height: 10),
+            // Fila 2 fichas
+            Row(children: [
+              Expanded(child: _StatCard(icon: Icons.percent_rounded, label: 'Tasa completado', value: '${(fs.tasaCompletado * 100).round()}%', color: c.gold)),
+              const SizedBox(width: 10),
+              Expanded(child: _StatCard(
+                icon: Icons.emoji_events_rounded,
+                label: 'Score medio',
+                value: fs.scoreMedioGlobal != null ? '${(fs.scoreMedioGlobal! * 100).round()}%' : '—',
+                color: c.purple,
+              )),
+            ]),
+
             if (fs.fichasPorNivel.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text('Progreso por nivel',
-                  style: TextStyle(color: c.textMid, fontSize: 12,
-                      fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+                  style: TextStyle(color: c.textMid, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
               const SizedBox(height: 8),
               ...fs.fichasPorNivel.entries.map((e) {
                 final nivel = e.key;
@@ -297,37 +252,29 @@ class _LogopedaResumenScreenState extends State<LogopedaResumenScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: c.gold.withValues(alpha: 0.3)),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded, color: c.gold, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      '$sinTipoVoz paciente${sinTipoVoz != 1 ? 's' : ''} sin tipo de voz asignado.',
-                      style: TextStyle(color: c.gold, fontSize: 13),
-                    ),
+              child: Row(children: [
+                Icon(Icons.warning_amber_rounded, color: c.gold, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '$sinTipoVoz paciente${sinTipoVoz != 1 ? 's' : ''} sin tipo de voz asignado.',
+                    style: TextStyle(color: c.gold, fontSize: 13),
                   ),
-                ],
-              ),
+                ),
+              ]),
             ),
           ],
 
           const SizedBox(height: 20),
-
-          // ── Lista individual ──────────────────────────────────
           Text('Detalle por paciente',
-              style: TextStyle(color: c.textMid, fontSize: 12,
-                  fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+              style: TextStyle(color: c.textMid, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
           const SizedBox(height: 10),
-
           ..._pacientes.map((p) => _PacienteRow(p: p)),
         ],
       ),
     );
   }
 }
-
-// ── Widgets ───────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
   final IconData icon;
@@ -348,16 +295,16 @@ class _StatCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: color, size: 22),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800)),
-              Text(label, style: TextStyle(color: c.textDim, fontSize: 11)),
-            ],
-          ),
+          const SizedBox(height: 8),
+          Text(value,
+              style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800),
+              overflow: TextOverflow.ellipsis),
+          Text(label,
+              style: TextStyle(color: c.textDim, fontSize: 11),
+              overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -381,45 +328,37 @@ class _PacienteRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: c.border),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundImage: p.picture != null ? NetworkImage(p.picture!) : null,
-            backgroundColor: c.accent.withValues(alpha: 0.15),
-            child: p.picture == null
-                ? Text(inicial, style: TextStyle(color: c.accent, fontSize: 14, fontWeight: FontWeight.w700))
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(p.name.isNotEmpty ? p.name : p.email,
-                    style: TextStyle(color: c.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                if (p.voiceType != null)
-                  Text(
-                    p.voiceType == 'esofagico' ? 'Esofágica' : 'Electrolaringe',
-                    style: TextStyle(color: c.textDim, fontSize: 11),
-                  ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _Mini('Nv. ${p.currentLevel}', c.accent),
-              const SizedBox(height: 3),
-              _Mini('${p.streakDays}d 🔥', c.gold),
-              if (p.hasVoice) ...[
-                const SizedBox(height: 3),
-                _Mini('Voz ✓', c.teal),
-              ],
-            ],
-          ),
-        ],
-      ),
+      child: Row(children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundImage: p.picture != null ? NetworkImage(p.picture!) : null,
+          backgroundColor: c.accent.withValues(alpha: 0.15),
+          child: p.picture == null
+              ? Text(inicial, style: TextStyle(color: c.accent, fontSize: 14, fontWeight: FontWeight.w700))
+              : null,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(p.name.isNotEmpty ? p.name : p.email,
+                style: TextStyle(color: c.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+            if (p.voiceType != null)
+              Text(
+                p.voiceType == 'esofagico' ? 'Esofágica' : 'Electrolaringe',
+                style: TextStyle(color: c.textDim, fontSize: 11),
+              ),
+          ]),
+        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          _Mini('Nv. ${p.currentLevel}', c.accent),
+          const SizedBox(height: 3),
+          _Mini('${p.streakDays}d 🔥', c.gold),
+          if (p.hasVoice) ...[
+            const SizedBox(height: 3),
+            _Mini('Voz ✓', c.teal),
+          ],
+        ]),
+      ]),
     );
   }
 }
