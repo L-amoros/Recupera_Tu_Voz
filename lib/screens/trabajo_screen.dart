@@ -162,7 +162,6 @@ class _FichaTile extends StatelessWidget {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(ficha.name, style: TextStyle(color: c.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            // FIX: Wrap evita overflow cuando hay muchos chips
             Wrap(spacing: 6, runSpacing: 4, children: [
               _MiniChip('Nv. ${ficha.level}', c.accent),
               _MiniChip('${ficha.words.length} palabras', c.textDim),
@@ -200,7 +199,6 @@ class _FichaDetalleScreen extends StatelessWidget {
       backgroundColor: c.bg,
       appBar: AppBar(title: Text(ficha.name)),
       body: ListView(padding: const EdgeInsets.all(20), children: [
-        // FIX: Wrap en vez de Row para que los chips no se salgan por la derecha
         Wrap(spacing: 8, runSpacing: 8, children: [
           _InfoChip(icon: Icons.bar_chart_rounded, label: 'Nivel ${ficha.level}', color: c.accent),
           _InfoChip(icon: Icons.list_alt_rounded, label: '${ficha.words.length} palabras', color: c.textMid),
@@ -325,6 +323,7 @@ class _PracticarScreenState extends State<_PracticarScreen> {
 
   @override
   void dispose() {
+    // Cierre silencioso si el usuario sale sin terminar
     if (_sessionId != null) {
       http.patch(
         Uri.parse('$kServerUrl/exercises/sesiones/$_sessionId/cerrar'),
@@ -493,7 +492,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
           ),
         ],
       ),
-      // FIX: SafeArea + SingleChildScrollView evitan el overflow en pantallas pequeñas
       body: SafeArea(
         child: _loading && _sessionId == null
             ? const Center(child: CircularProgressIndicator())
@@ -530,7 +528,6 @@ class _PracticarScreenState extends State<_PracticarScreen> {
                 Text('Palabra ${_wordIndex + 1} de ${words.length}',
                     style: TextStyle(color: c.textDim, fontSize: 12)),
                 const SizedBox(height: 24),
-
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
@@ -542,12 +539,10 @@ class _PracticarScreenState extends State<_PracticarScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
                 if (_feedback != null && !_loading) ...[
                   _FeedbackVisual(feedback: _feedback!, score: _lastScore, c: c),
                   const SizedBox(height: 20),
                 ],
-
                 if (!_loading) ...[
                   GestureDetector(
                     onTap: _recording ? _detenerYEnviar : _grabar,
@@ -576,9 +571,7 @@ class _PracticarScreenState extends State<_PracticarScreen> {
                   const SizedBox(height: 10),
                   Text('Evaluando…', style: TextStyle(color: c.textDim, fontSize: 13)),
                 ],
-
                 const Spacer(),
-
                 if (!_loading && !_recording)
                   Row(children: [
                     OutlinedButton(
@@ -700,7 +693,6 @@ class _ResultadosScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-
                   if (scoreGlobal != null) ...[
                     SizedBox(width: 80, height: 80,
                       child: CircularProgressIndicator(
@@ -716,7 +708,6 @@ class _ResultadosScreen extends StatelessWidget {
                     Text('score', style: TextStyle(color: c.textDim, fontSize: 11)),
                     const SizedBox(height: 20),
                   ],
-
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     _StatPill(label: 'Correctas', value: '$correctas/$total', color: c.teal),
                     const SizedBox(width: 12),
@@ -724,7 +715,6 @@ class _ResultadosScreen extends StatelessWidget {
                         value: '${results.where((r) => r.saltada).length}', color: c.textDim),
                   ]),
                   const SizedBox(height: 20),
-
                   Container(
                     decoration: BoxDecoration(
                       color: c.surface,
@@ -760,14 +750,15 @@ class _ResultadosScreen extends StatelessWidget {
                 ]),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 0, 28, 20),
               child: FilledButton(
                 onPressed: () {
-                  Navigator.of(context).popUntil(
-                          (route) => route.isFirst || route.settings.name == '/trabajo');
-                  Navigator.of(context).pop(fichaActualizada);
+                  // Dos pops: uno cierra _ResultadosScreen, otro cierra _FichaDetalleScreen
+                  // y vuelve a la lista de fichas con los datos actualizados
+                  Navigator.of(context)
+                    ..pop()
+                    ..pop(fichaActualizada);
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: c.accent, foregroundColor: c.bg,

@@ -195,64 +195,66 @@ class _FrasesScreenState extends State<FrasesScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 38, height: 4,
-                  decoration: BoxDecoration(
-                    color: c.border,
-                    borderRadius: BorderRadius.circular(2),
+        builder: (ctx, setModal) => SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38, height: 4,
+                    decoration: BoxDecoration(
+                      color: c.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              Text('Nueva frase',
-                  style: TextStyle(
-                      color: c.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700)),
-              const SizedBox(height: 14),
-              AccentTextField(
-                controller: controller,
-                hint: 'Escribe la frase...',
-                maxLines: 3,
-              ),
-              const SizedBox(height: 14),
-              const SectionLabel('Categoría',
-                  padding: EdgeInsets.only(bottom: 10)),
-              ChipRow(
-                options: const [
-                  'Mis frases', 'Saludos', 'Necesidades', 'Respuestas', 'Urgente'
-                ],
-                selected: catSel,
-                onSelect: (c) => setModal(() => catSel = c),
-                colorOf: AppColors.catColor,
-              ),
-              const SizedBox(height: 18),
-              PrimaryButton(
-                label: 'Guardar frase',
-                onTap: () {
-                  final texto = controller.text.trim();
-                  if (texto.isEmpty) return;
-                  final nueva = FraseItem(
-                      texto: texto, categoria: catSel, esPersonal: true);
-                  final updated = [..._frasesPersonales, nueva];
-                  setState(() => _frasesPersonales = updated);
-                  _settingsSvc.saveFrasesPersonales(updated);
-                  Navigator.pop(ctx);
-                },
-              ),
-            ],
+                const SizedBox(height: 18),
+                Text('Nueva frase',
+                    style: TextStyle(
+                        color: c.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 14),
+                AccentTextField(
+                  controller: controller,
+                  hint: 'Escribe la frase...',
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 14),
+                const SectionLabel('Categoría',
+                    padding: EdgeInsets.only(bottom: 10)),
+                ChipRow(
+                  options: const [
+                    'Mis frases', 'Saludos', 'Necesidades', 'Respuestas', 'Urgente'
+                  ],
+                  selected: catSel,
+                  onSelect: (c) => setModal(() => catSel = c),
+                  colorOf: AppColors.catColor,
+                ),
+                const SizedBox(height: 18),
+                PrimaryButton(
+                  label: 'Guardar frase',
+                  onTap: () {
+                    final texto = controller.text.trim();
+                    if (texto.isEmpty) return;
+                    final nueva = FraseItem(
+                        texto: texto, categoria: catSel, esPersonal: true);
+                    final updated = [..._frasesPersonales, nueva];
+                    setState(() => _frasesPersonales = updated);
+                    _settingsSvc.saveFrasesPersonales(updated);
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

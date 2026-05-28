@@ -201,8 +201,29 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _tabIndex = 0;
   bool _showCloneVoice = false;
+  late AppUser _user;
 
   final VoiceApiService _voiceApi = VoiceApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _user = widget.user;
+  }
+
+  @override
+  void didUpdateWidget(AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Si el padre actualiza el user (p.ej. tras guardar), sincronizamos
+    if (oldWidget.user != widget.user) {
+      setState(() => _user = widget.user);
+    }
+  }
+
+  void _updateUser(AppUser updated) {
+    setState(() => _user = updated);
+    widget.onUserChanged(updated);
+  }
 
   void _goToTab(int i) => setState(() => _tabIndex = i);
 
@@ -210,34 +231,28 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     if (_showCloneVoice) {
       return CloneVoiceScreen(
-        token: widget.user.token,
-        alreadyHasVoice: widget.user.hasVoice,
-        initialNumReferences: widget.user.numReferences,
+        token: _user.token,
+        alreadyHasVoice: _user.hasVoice,
+        initialNumReferences: _user.numReferences,
         onUploadReplace: (files) async {
           final saved = await _voiceApi.uploadReplaceAudios(
-            token: widget.user.token,
+            token: _user.token,
             files: files,
           );
-          widget.onUserChanged(
-            widget.user.copyWith(hasVoice: true, numReferences: saved),
-          );
+          _updateUser(_user.copyWith(hasVoice: true, numReferences: saved));
           return saved;
         },
         onUploadAdd: (files) async {
           final saved = await _voiceApi.uploadAddAudios(
-            token: widget.user.token,
+            token: _user.token,
             files: files,
           );
-          widget.onUserChanged(
-            widget.user.copyWith(hasVoice: true, numReferences: saved),
-          );
+          _updateUser(_user.copyWith(hasVoice: true, numReferences: saved));
           return saved;
         },
         onDelete: () async {
-          await _voiceApi.deleteVoice(widget.user.token);
-          widget.onUserChanged(
-            widget.user.copyWith(hasVoice: false, numReferences: 0),
-          );
+          await _voiceApi.deleteVoice(_user.token);
+          _updateUser(_user.copyWith(hasVoice: false, numReferences: 0));
         },
         onDone: () => setState(() => _showCloneVoice = false),
       );
@@ -246,17 +261,17 @@ class _AppShellState extends State<AppShell> {
     // ── Las 5 pantallas de navegación ──────────────────────────
     final screens = [
       HomeScreen(onEmpezar: () => _goToTab(1)),
-      TextScreen(settings: widget.settings, user: widget.user),
-      FrasesScreen(settings: widget.settings, user: widget.user),
-      TrabajoScreen(user: widget.user),
-      LipScreen(user: widget.user),                              // ← NUEVO
+      TextScreen(settings: widget.settings, user: _user),
+      FrasesScreen(settings: widget.settings, user: _user),
+      TrabajoScreen(user: _user),
+      LipScreen(user: _user),
       ProfileScreen(
         settings: widget.settings,
-        user: widget.user,
+        user: _user,
         onSettingsChanged: widget.onSettingsChanged,
         onCloneVoice: () => setState(() => _showCloneVoice = true),
         onLogout: widget.onLogout,
-        onUserChanged: widget.onUserChanged,
+        onUserChanged: _updateUser,
       ),
     ];
 
