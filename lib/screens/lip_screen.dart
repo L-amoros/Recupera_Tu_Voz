@@ -4,9 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import '../models/app_user.dart';
 import '../theme/app_theme.dart';
+import '../services/api_service.dart'; // para kServerUrl
 
 class LipScreen extends StatefulWidget {
   final AppUser? user;
@@ -28,6 +31,8 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
   // ── Estado UI ──────────────────────────────────────────────────
   _LipState _state = _LipState.idle;
   String? _errorMsg;
+  String? _resultText;
+  List<int>? _audioBytes;
 
   int _recSeconds = 0;
   static const int _maxSeconds = 8;
@@ -83,10 +88,14 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
 
       final ctrl = CameraController(
         front,
-        ResolutionPreset.medium,
-        enableAudio: true,
+        ResolutionPreset.high,
+        enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
+
+      await ctrl.initialize();
+      await ctrl.setExposureMode(ExposureMode.auto);
+      await ctrl.setFocusMode(FocusMode.auto);
 
       await ctrl.initialize();
       if (!mounted) return;
@@ -103,12 +112,15 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
   // ── Grabación ──────────────────────────────────────────────────
   Future<void> _startRecording() async {
     if (_camCtrl == null || !_cameraReady || _recording) return;
+    if (_state == _LipState.processing) return;
 
     setState(() {
       _recording = true;
       _recSeconds = 0;
       _state = _LipState.recording;
       _errorMsg = null;
+      _resultText = null;
+      _audioBytes = null;
     });
 
     await _camCtrl!.startVideoRecording();
@@ -120,37 +132,69 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
       if (!mounted || !_recording) return;
       setState(() => _recSeconds++);
       if (_recSeconds >= _maxSeconds) {
-        _stopAndDiscard();
+        _stopAndSend();
       } else {
         _tickSeconds();
       }
     });
   }
 
-  Future<void> _stopAndDiscard() async {
+  Future<void> _stopAndSend() async {
     if (!_recording) return;
-    setState(() => _recording = false);
+    setState(() {
+      _recording = false;
+      _state = _LipState.processing;
+    });
 
     XFile? videoFile;
     try {
       videoFile = await _camCtrl!.stopVideoRecording();
-    } catch (_) {
-      setState(() => _state = _LipState.idle);
+    } catch (e) {
+      if (mounted) setState(() { _state = _LipState.idle; _errorMsg = 'Error al detener la grabación.'; });
       return;
     }
 
-    // Eliminar el fichero y volver a idle — sin llamada al backend
     try {
-      await File(videoFile.path).delete();
-    } catch (_) {}
+      final token = widget.user?.token ?? '';
+      final uri = Uri.parse('$kServerUrl/lipreading/speak');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(await http.MultipartFile.fromPath('video', videoFile.path,));
 
-    if (mounted) setState(() => _state = _LipState.idle);
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
+
+      if (streamed.statusCode == 200) {
+        final bytes = await streamed.stream.toBytes();
+        final recognizedText = streamed.headers['x-recognized-text'] ?? '';
+        final decodedText = Uri.decodeComponent(recognizedText.replaceAll('+', ' '));
+        if (mounted) {
+          setState(() {
+            _state = _LipState.result;
+            _resultText = decodedText;
+            _audioBytes = bytes;
+          });
+        }
+      } else {
+        final body = await streamed.stream.bytesToString();
+        String detail = 'Error del servidor (${streamed.statusCode})';
+        try {
+          detail = jsonDecode(body)['detail'] ?? detail;
+        } catch (_) {}
+        if (mounted) setState(() { _state = _LipState.error; _errorMsg = detail; });
+      }
+    } catch (e) {
+      if (mounted) setState(() { _state = _LipState.error; _errorMsg = 'No se pudo conectar con el servidor.'; });
+    } finally {
+      try { await File(videoFile.path).delete(); } catch (_) {}
+    }
   }
 
   void _reset() {
     setState(() {
       _state = _LipState.idle;
       _errorMsg = null;
+      _resultText = null;
+      _audioBytes = null;
       _recSeconds = 0;
     });
   }
@@ -179,8 +223,10 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
     return Column(
       children: [
         _buildCameraPreview(),
+        const SizedBox(height: 16),
+        _buildStatusArea(),
         const Spacer(),
-        _buildControls(),
+        if (_state != _LipState.processing) _buildControls(),
         const SizedBox(height: 24),
       ],
     );
@@ -197,7 +243,7 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
             child: CameraPreview(_camCtrl!),
           ),
 
-          // Guía oval
+          // Guía oval de labios
           Positioned(
             bottom: 40,
             child: Container(
@@ -222,16 +268,114 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
               right: 12,
               child: _RecordingBadge(seconds: _recSeconds, max: _maxSeconds),
             ),
+
+          // Overlay procesando
+          if (_state == _LipState.processing)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('Reconociendo...', style: TextStyle(color: Colors.white, fontSize: 14)),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
+  Widget _buildStatusArea() {
+    if (_state == _LipState.result && _resultText != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: c.accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.accent.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Texto reconocido:',
+                      style: TextStyle(color: c.textDim, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  Text(_resultText!,
+                      style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // TODO: reproducir _audioBytes con audioplayers cuando lo tengas integrado
+            Text('Audio sintetizado listo', style: TextStyle(color: c.textDim, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
+    if (_state == _LipState.error && _errorMsg != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: c.warn.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: c.warn.withValues(alpha: 0.3)),
+          ),
+          child: Text(_errorMsg!, style: TextStyle(color: c.warn, fontSize: 13)),
+        ),
+      );
+    }
+
+    if (_state == _LipState.idle) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          'Mantén pulsado para grabar. Habla mirando a la cámara.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: c.textDim, fontSize: 13),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   Widget _buildControls() {
+    if (_state == _LipState.result || _state == _LipState.error) {
+      return GestureDetector(
+        onTap: _reset,
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: c.accent,
+            boxShadow: [
+              BoxShadow(color: c.accent.withValues(alpha: 0.4), blurRadius: 12),
+            ],
+          ),
+          child: const Icon(Icons.refresh, color: Colors.black, size: 32),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTapDown: (_) => _startRecording(),
-      onTapUp: (_) { if (_recording) _stopAndDiscard(); },
-      onTapCancel: () { if (_recording) _stopAndDiscard(); },
+      onTapUp: (_) { if (_recording) _stopAndSend(); },
+      onTapCancel: () { if (_recording) _stopAndSend(); },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: _recording ? 72 : 80,
@@ -276,7 +420,7 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
 
 // ─────────────────────────────────────────────────────────────────
 
-enum _LipState { idle, recording }
+enum _LipState { idle, recording, processing, result, error }
 
 class _RecordingBadge extends StatelessWidget {
   final int seconds;
