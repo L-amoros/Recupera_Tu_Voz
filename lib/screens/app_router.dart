@@ -3,6 +3,7 @@ import '../models/app_user.dart';
 import '../models/app_settings.dart';
 import '../services/roles_service.dart';
 import 'onboarding/role_selection_screen.dart';
+import 'onboarding/patient_code_screen.dart';
 import 'panel/logopeda_shell.dart';
 import '../main.dart' show AppShell;
 
@@ -38,6 +39,14 @@ class _AppRouterState extends State<AppRouter> {
     _fetchRole();
   }
 
+  @override
+  void didUpdateWidget(AppRouter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.user.logopedaId != widget.user.logopedaId) {
+      setState(() => _user = widget.user);
+    }
+  }
+
   Future<void> _fetchRole() async {
     if (!mounted) return;
     setState(() { _loading = true; _error = null; });
@@ -58,6 +67,7 @@ class _AppRouterState extends State<AppRouter> {
       setState(() { _loading = false; _error = 'Sin conexión al servidor'; });
     }
   }
+
   void _onRoleSet(AppUser updated) {
     if (!mounted) return;
     widget.onUserChanged(updated);
@@ -106,6 +116,13 @@ class _AppRouterState extends State<AppRouter> {
         user: _user,
         settings: widget.settings,
         onLogout: widget.onLogout,
+      );
+    }
+
+    if (_user.isPatient && (_user.logopedaId == null || _user.logopedaId!.isEmpty)) {
+      return PatientCodeScreen(
+        user: _user,
+        onLinked: _onRoleSet,
       );
     }
 
