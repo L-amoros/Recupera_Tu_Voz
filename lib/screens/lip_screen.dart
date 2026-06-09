@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
+import 'package:just_audio/just_audio.dart';
 import 'dart:convert';
 
 import '../models/app_user.dart';
@@ -28,6 +29,10 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
   bool _cameraReady = false;
   bool _recording = false;
 
+  // ── Audio ──────────────────────────────────────────────────────
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _playing = false;
+
   // ── Estado UI ──────────────────────────────────────────────────
   _LipState _state = _LipState.idle;
   String? _errorMsg;
@@ -42,12 +47,18 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initCamera();
+    _audioPlayer.playerStateStream.listen((state) {
+      if (mounted) {
+        setState(() => _playing = state.playing);
+      }
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _camCtrl?.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -159,20 +170,28 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
       final uri = Uri.parse('$kServerUrl/lipreading/speak');
       final request = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(await http.MultipartFile.fromPath('video', videoFile.path,));
+        ..files.add(await http.MultipartFile.fromPath('video', videoFile.path));
 
-      final streamed = await request.send().timeout(const Duration(seconds: 60));
+      final streamed = await request.send().timeout(const Duration(seconds: 120));
 
       if (streamed.statusCode == 200) {
         final bytes = await streamed.stream.toBytes();
         final recognizedText = streamed.headers['x-recognized-text'] ?? '';
-        final decodedText = Uri.decodeComponent(recognizedText.replaceAll('+', ' '));
+        // FIX: decodificación segura para tildes y caracteres especiales
+        String decodedText;
+        try {
+          decodedText = Uri.decodeFull(recognizedText);
+        } catch (_) {
+          decodedText = recognizedText;
+        }
         if (mounted) {
           setState(() {
             _state = _LipState.result;
             _resultText = decodedText;
             _audioBytes = bytes;
           });
+          // Reproducir el audio automáticamente
+          await _playAudio(bytes);
         }
       } else {
         final body = await streamed.stream.bytesToString();
@@ -183,13 +202,26 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
         if (mounted) setState(() { _state = _LipState.error; _errorMsg = detail; });
       }
     } catch (e) {
-      if (mounted) setState(() { _state = _LipState.error; _errorMsg = 'No se pudo conectar con el servidor.'; });
+      if (mounted) setState(() { _state = _LipState.error; _errorMsg = e.toString(); });
     } finally {
       try { await File(videoFile.path).delete(); } catch (_) {}
     }
   }
 
+  Future<void> _playAudio(List<int> bytes) async {
+    try {
+      final dir = await Directory.systemTemp.createTemp('lip_audio');
+      final file = File('${dir.path}/audio.wav');
+      await file.writeAsBytes(bytes);
+      await _audioPlayer.setFilePath(file.path);
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('Error reproduciendo audio: $e');
+    }
+  }
+
   void _reset() {
+    _audioPlayer.stop();
     setState(() {
       _state = _LipState.idle;
       _errorMsg = null;
@@ -220,15 +252,18 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
           : const Center(child: CircularProgressIndicator());
     }
 
-    return Column(
-      children: [
-        _buildCameraPreview(),
-        const SizedBox(height: 16),
-        _buildStatusArea(),
-        const Spacer(),
-        if (_state != _LipState.processing) _buildControls(),
-        const SizedBox(height: 24),
-      ],
+    // FIX: SingleChildScrollView evita el overflow cuando aparece el resultado
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildCameraPreview(),
+          const SizedBox(height: 16),
+          _buildStatusArea(),
+          const SizedBox(height: 24),
+          if (_state != _LipState.processing) _buildControls(),
+          const SizedBox(height: 32),
+        ],
+      ),
     );
   }
 
@@ -316,8 +351,35 @@ class _LipScreenState extends State<LipScreen> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(height: 12),
-            // TODO: reproducir _audioBytes con audioplayers cuando lo tengas integrado
-            Text('Audio sintetizado listo', style: TextStyle(color: c.textDim, fontSize: 12)),
+            // Botón de reproducir/parar audio
+            if (_audioBytes != null)
+              GestureDetector(
+                onTap: () async {
+                  if (_playing) {
+                    await _audioPlayer.stop();
+                  } else {
+                    await _playAudio(_audioBytes!);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: c.accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: c.accent.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_playing ? Icons.stop_rounded : Icons.volume_up_rounded,
+                          color: c.accent, size: 20),
+                      const SizedBox(width: 8),
+                      Text(_playing ? 'Parar' : 'Reproducir',
+                          style: TextStyle(color: c.accent, fontSize: 14, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       );
